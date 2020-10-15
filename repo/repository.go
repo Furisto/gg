@@ -1,6 +1,8 @@
 package repo
 
 import (
+	"fmt"
+	"github.com/furisto/gog/storage"
 	"gopkg.in/ini.v1"
 	"io/ioutil"
 	"os"
@@ -8,54 +10,13 @@ import (
 	"strconv"
 )
 
-type ObjectStore interface {
-	Get(oid string)  ([]byte, error)
-	Put(oid string, data []byte) error
-	Stat(oid string) error
-}
-
-type FilesystemStore struct {
-	location string
-}
-
-func NewFsStore(path string) *FilesystemStore {
-	path = filepath.Join(path, "objects")
-	return &FilesystemStore{
-		location: path,
-	}
-}
-
-func(store *FilesystemStore) Get(oid string) ([]byte, error) {
-	return nil, nil
-}
-
-func(store *FilesystemStore) Put(oid string, data []byte) error{
-	return nil
-}
-
-func(store *FilesystemStore) Stat(oid string) error{
-	return nil
-}
-
-type RepoConfig struct {
-	location string
-}
-
-func (config *RepoConfig) Set(section string, key string, value string) error {
-	return nil
-}
-
-func (config *RepoConfig) Get(section string, key string) (string, error) {
-	return "", nil
-}
-
 type Repository struct {
-	location string
-	storage ObjectStore
-	config *RepoConfig
+	Location string
+	Storage storage.ObjectStore
+	Config *RepoConfig
 }
 
-func Init(path string, bare bool, storage ObjectStore) (*Repository, error){
+func Init(path string, bare bool, storage storage.ObjectStore) (*Repository, error){
 	var repoPath string
 	if bare {
 		repoPath = path
@@ -92,16 +53,33 @@ func Init(path string, bare bool, storage ObjectStore) (*Repository, error){
 }
 
 func InitDefault(path string, bare bool) (*Repository, error) {
-	repo, err := Init(path, bare, NewFsStore(path))
+	repo, err := Init(path, bare, storage.NewFsStore(filepath.Join(path, ".git")))
 	return repo, err
 }
 
-func NewRepo(path string, store ObjectStore, config *RepoConfig) *Repository{
+func NewRepo(path string, store storage.ObjectStore, config *RepoConfig) *Repository{
 	return &Repository{
-		location: path,
-		storage: store,
-		config: config,
+		Location: path,
+		Storage: store,
+		Config: config,
 	}
+}
+
+func FromExisting(path string) (*Repository, error){
+	if path == filepath.Dir(path) {
+		return nil, fmt.Errorf("fatal: not a git repository (or any of the parent directories)")
+	}
+
+	gitPath := filepath.Join(path, ".git")
+	if _, err := os.Stat(gitPath); os.IsNotExist(err) {
+		return FromExisting(filepath.Dir(path))
+	}
+
+	return &Repository{
+		Location: path,
+		Storage: storage.NewFsStore(gitPath),
+		Config: &RepoConfig{ location: path},
+	}, nil
 }
 
 func createConfig(configPath string, values map[string]string) (*RepoConfig, error) {

@@ -22,8 +22,8 @@ func setupCommands() *cobra.Command {
 	initCmd := cmd.SetupInitCmd(cmdContext)
 	rootCmd.AddCommand(initCmd)
 
-	//hashObject := cmd.SetupHashObjectCmd()
-	//rootCmd.AddCommand(hashObject)
+	hashObject := cmd.SetupHashObjectCmd(cmdContext)
+	rootCmd.AddCommand(hashObject)
 
 	return rootCmd
 }

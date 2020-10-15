@@ -57,9 +57,9 @@ func (cmd *InitCommand) Execute(opt InitCmdOptions) {
 	var message string
 
 	if _, err := os.Stat(gitFolder); os.IsNotExist(err) {
-		message = fmt.Sprintln("Initialized empty Git repository in %v", opt.path)
+		message = fmt.Sprintf("Initialized empty Git repository in %v", opt.path)
 	} else {
-		message = fmt.Sprintln("Reinitialized existing Git repository in %v", opt.path)
+		message = fmt.Sprintf("Reinitialized existing Git repository in %v", opt.path)
 	}
 
 	repo.InitDefault(opt.path, opt.bare)
