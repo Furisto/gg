@@ -38,7 +38,7 @@ func(store *FilesystemStore) Get(oid string) ([]byte, error) {
 	objectPath:= filepath.Join(store.location, oid[:2], oid[2:])
 	exists, _ := store.Stat(objectPath)
 	if !exists {
-		return nil, fmt.Errorf("key %v could not be found", oid)
+		return nil, fmt.Errorf("oid %v could not be found", oid)
 	}
 
 	objectFile, err := os.Open(objectPath)
@@ -47,6 +47,9 @@ func(store *FilesystemStore) Get(oid string) ([]byte, error) {
 	}
 
 	reader, err := zlib.NewReader(objectFile)
+	if err != nil {
+		return nil, err
+	}
 	var buffer bytes.Buffer
 	io.Copy(&buffer, reader)
 	reader.Close()
@@ -114,7 +117,7 @@ func(store *FilesystemStore) Delete(oid string) error {
 		return err
 	}
 
-	objectPath := filepath.Join(store.location, oid[:2], oid[:2])
+	objectPath := filepath.Join(store.location, oid[:2], oid[2:])
 	if err := os.Remove(objectPath); err != nil {
 		return err
 	}
@@ -124,7 +127,7 @@ func(store *FilesystemStore) Delete(oid string) error {
 
 func checkObjectId(oid string) error {
 	if len(oid) < 4 {
-		fmt.Errorf("key needs to be ast least 4 characters long")
+		fmt.Errorf("oid needs to be ast least 4 characters long")
 	}
 
 	return nil
