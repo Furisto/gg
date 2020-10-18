@@ -59,11 +59,11 @@ func (cmd *HashObjectCommand) Execute(options HashObjectOptions) error{
 		return fmt.Errorf("cannot hash directory %v", options.file)
 	}
 
-	blob, err := storage.BlobFromFile(options.file)
+	blob, err := storage.NewBlobFromFile(options.file)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(cmd.writer, "%v", blob.OID)
+	fmt.Fprintf(cmd.writer, "%v", blob.OID())
 
 	if options.store {
 		gitRepo, err := repo.FromExisting(options.file)
@@ -71,7 +71,7 @@ func (cmd *HashObjectCommand) Execute(options HashObjectOptions) error{
 			return err
 		}
 
-		gitRepo.Storage.Put(blob.OID, blob.Bytes())
+		gitRepo.Storage.Put(blob.OID(), blob.Bytes())
 	}
 
 	return nil

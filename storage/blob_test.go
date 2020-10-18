@@ -12,18 +12,18 @@ func TestCreateBlob(t *testing.T) {
 		t.Fatal("Could not create blob file")
 	}
 
-	blob, err := BlobFromFile(filePath)
+	blob, err := NewBlobFromFile(filePath)
 	if err != nil {
 		t.Error("Could not create blob")
 	}
 
 	const oid = "34c92c2d93d8cdb680b66118dd37551caa0b4a25"
-	if blob.OID != oid {
+	if blob.OID() != oid {
 		t.Errorf("Expected oid of %v, but was %v", oid, blob.OID)
 	}
 
 	const size = 11
-	if blob.Size != 11 {
+	if blob.Size() != 11 {
 		t.Errorf("Expected blob size of %v, but was %v", 11, blob.Size)
 	}
 

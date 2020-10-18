@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -13,6 +14,7 @@ type ObjectStore interface {
 	Get(oid string)  ([]byte, error)
 	Put(oid string, data []byte) error
 	Stat(oid string) (bool, error)
+	Find(prefix string) ([]string, error)
 }
 
 type FilesystemStore struct {
@@ -55,6 +57,29 @@ func(store *FilesystemStore) Get(oid string) ([]byte, error) {
 	reader.Close()
 
 	return buffer.Bytes(), nil
+}
+
+func (store *FilesystemStore) Find(prefix string) ([]string, error) {
+	if err:= checkObjectId(prefix); err != nil {
+		return nil, err
+	}
+
+	bucket := filepath.Join(store.location, prefix[:2])
+	if _, err:= os.Stat(bucket); os.IsNotExist(err) {
+		return []string{}, nil
+	}
+
+	files, err := ioutil.ReadDir(bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	oids := make([]string, len(files))
+	for i, f := range files {
+		oids[i] = prefix[:2] + filepath.Base(f.Name())
+	}
+
+	return oids, nil
 }
 
 func(store *FilesystemStore) Put(oid string, data []byte) error{
