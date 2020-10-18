@@ -25,5 +25,8 @@ func setupCommands() *cobra.Command {
 	hashObject := cmd.SetupHashObjectCmd(cmdContext)
 	rootCmd.AddCommand(hashObject)
 
+	catFile := cmd.SetupCatFileCmd(cmdContext)
+	rootCmd.AddCommand(catFile)
+
 	return rootCmd
 }
