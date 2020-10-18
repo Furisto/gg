@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"github.com/furisto/gog/objects"
 	"github.com/furisto/gog/repo"
 	"github.com/furisto/gog/storage"
 	"github.com/furisto/gog/util"
@@ -18,7 +19,7 @@ func TestPrintSizeOfBlob(t *testing.T) {
 		return
 	}
 
-	blob := storage.NewBlob([]byte("Hello Git!"))
+	blob := objects.NewBlob([]byte("Hello Git!"))
 	if err:= repo.Storage.Put(blob.OID(), blob.Bytes()); err != nil {
 		t.Fatalf("cannot store data: %v", err)
 		return
@@ -55,7 +56,7 @@ func TestPrintTypeOfBlob(t *testing.T) {
 		t.Fatalf("")
 	}
 
-	blob := storage.NewBlob([]byte("Hello Git!"))
+	blob := objects.NewBlob([]byte("Hello Git!"))
 	if err:= repo.Storage.Put(blob.OID(), blob.Bytes()); err != nil {
 		t.Fatalf("cannot store data: %v", err)
 	}
@@ -86,7 +87,7 @@ func TestPrettyPrintOfBlob(t *testing.T) {
 	}
 
 	var content = []byte("Hello Git!")
-	blob := storage.NewBlob(content)
+	blob := objects.NewBlob(content)
 	if err:= repo.Storage.Put(blob.OID(), blob.Bytes()); err != nil {
 		t.Fatalf("cannot store data: %v", err)
 	}

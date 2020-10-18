@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/furisto/gog/objects"
 	"github.com/furisto/gog/repo"
-	"github.com/furisto/gog/storage"
 	"github.com/spf13/cobra"
 	"io"
 	"os"
@@ -59,7 +59,7 @@ func (cmd *HashObjectCommand) Execute(options HashObjectOptions) error{
 		return fmt.Errorf("cannot hash directory %v", options.file)
 	}
 
-	blob, err := storage.NewBlobFromFile(options.file)
+	blob, err := objects.NewBlobFromFile(options.file)
 	if err != nil {
 		return err
 	}

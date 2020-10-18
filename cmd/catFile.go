@@ -3,8 +3,8 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"github.com/furisto/gog/objects"
 	"github.com/furisto/gog/repo"
-	"github.com/furisto/gog/storage"
 	"github.com/spf13/cobra"
 	"io"
 	"os"
@@ -80,10 +80,10 @@ func (cmd *CatFileCmd) Execute(options CatFileOptions) error {
 		return err
 	}
 
-	var o storage.Object
+	var o objects.Object
 	// todo: implement other object types
-	if storage.IsBlob(data) {
-		o, err = storage.LoadBlob(data)
+	if objects.IsBlob(data) {
+		o, err = objects.LoadBlob(data)
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func (cmd *CatFileCmd) Execute(options CatFileOptions) error {
 		fmt.Fprintf(cmd.writer, "%v", o.Type())
 	} else
 	if options.Pretty {
-		output, err := storage.FormatObject(o)
+		output, err := objects.FormatObject(o)
 		if err != nil {
 			return err
 		}

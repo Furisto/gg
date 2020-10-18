@@ -1,4 +1,4 @@
-package storage
+package objects
 
 const sizeStartMarker = byte(' ')
 const sizeEndMarker = byte('\x00')

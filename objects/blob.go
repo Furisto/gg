@@ -1,4 +1,4 @@
-package storage
+package objects
 
 import (
 	"bytes"
@@ -39,7 +39,7 @@ func NewBlobFromFile(filePath string) (*Blob, error){
 		return nil, err
 	}
 
-	blob := Blob {}
+	blob := Blob{}
 	blob.SetSize(uint32(len(content)))
 	blob.Content = content
 	
@@ -68,7 +68,7 @@ func LoadBlob(blobData []byte) (*Blob, error) {
 		return nil, errors.New("malformed object")
 	}
 
-	blob:= Blob {
+	blob:= Blob{
 		Content: blobData[end+1:],
 	}
 

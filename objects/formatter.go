@@ -1,6 +1,8 @@
-package storage
+package objects
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func FormatObject(o Object) (string, error) {
 	switch o.Type() {
