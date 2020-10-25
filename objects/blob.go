@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/furisto/gog/storage"
 	hasher "github.com/furisto/gog/util"
 	"io/ioutil"
 	"os"
@@ -13,8 +14,8 @@ import (
 var BlobType = []byte("blob")
 
 type Blob struct {
-	oid string
-	size uint32
+	oid     string
+	size    uint32
 	Content []byte
 }
 
@@ -23,18 +24,18 @@ func NewBlob(content []byte) *Blob {
 	blob.SetSize(uint32(len(content)))
 	blob.Content = content
 
-	header:= blob.getHeader()
+	header := blob.getHeader()
 	blob.SetOID(hasher.Hash(header, content))
 
 	return &blob
 }
 
-func NewBlobFromFile(filePath string) (*Blob, error){
+func NewBlobFromFile(filePath string) (*Blob, error) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, err
 	}
 
-	content, err := ioutil.ReadFile(filePath);
+	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -42,8 +43,8 @@ func NewBlobFromFile(filePath string) (*Blob, error){
 	blob := Blob{}
 	blob.SetSize(uint32(len(content)))
 	blob.Content = content
-	
-	header:= blob.getHeader()
+
+	header := blob.getHeader()
 	blob.SetOID(hasher.Hash(header, content))
 
 	return &blob, nil
@@ -54,12 +55,12 @@ func LoadBlob(blobData []byte) (*Blob, error) {
 		return nil, errors.New("not of type blob")
 	}
 
-	start:= bytes.IndexByte(blobData, sizeStartMarker)
+	start := bytes.IndexByte(blobData, sizeStartMarker)
 	if start == -1 {
 		return nil, errors.New("malformed object")
 	}
 
-	end:= bytes.IndexByte(blobData, sizeEndMarker)
+	end := bytes.IndexByte(blobData, sizeEndMarker)
 	if end == -1 {
 		return nil, errors.New("malformed object")
 	}
@@ -68,11 +69,11 @@ func LoadBlob(blobData []byte) (*Blob, error) {
 		return nil, errors.New("malformed object")
 	}
 
-	blob:= Blob{
+	blob := Blob{
 		Content: blobData[end+1:],
 	}
 
-	size, err := strconv.Atoi(string(blobData[start+1:end]))
+	size, err := strconv.Atoi(string(blobData[start+1 : end]))
 	if err != nil {
 		return nil, err
 	}
@@ -87,12 +88,12 @@ func IsBlob(data []byte) bool {
 	return bytes.HasPrefix(data, BlobType)
 }
 
-func (b *Blob) Bytes()[]byte {
-	bytes := append(b.getHeader(), b.Content...)
-	return bytes
+func (b *Blob) Bytes() []byte {
+	by := append(b.getHeader(), b.Content...)
+	return by
 }
 
-func (b *Blob) OID() string  {
+func (b *Blob) OID() string {
 	return b.oid
 }
 
@@ -110,6 +111,11 @@ func (b *Blob) SetSize(size uint32) {
 
 func (b *Blob) Type() string {
 	return "Blob"
+}
+
+func (b *Blob) Save(store storage.ObjectStore) error {
+	by := b.Bytes()
+	return store.Put(b.OID(), by)
 }
 
 func (b *Blob) getHeader() []byte {

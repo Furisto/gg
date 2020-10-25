@@ -12,11 +12,11 @@ import (
 
 type Repository struct {
 	Location string
-	Storage storage.ObjectStore
-	Config *RepoConfig
+	Storage  storage.ObjectStore
+	Config   *RepoConfig
 }
 
-func Init(path string, bare bool, storage storage.ObjectStore) (*Repository, error){
+func Init(path string, bare bool, storage storage.ObjectStore) (*Repository, error) {
 	var repoPath string
 	if bare {
 		repoPath = path
@@ -24,10 +24,10 @@ func Init(path string, bare bool, storage storage.ObjectStore) (*Repository, err
 		repoPath = filepath.Join(path, ".git")
 	}
 
-	directories := []string {"hooks", "info", "refs"}
+	directories := []string{"hooks", "info", "refs"}
 	files := map[string][]byte{
-		"description": []byte ("Unnamed repository; edit this file 'description' to name the repository.\n"),
-		"HEAD": []byte ("ref: refs/heads/master"),
+		"description": []byte("Unnamed repository; edit this file 'description' to name the repository.\n"),
+		"HEAD":        []byte("ref: refs/heads/master"),
 	}
 
 	for _, directory := range directories {
@@ -36,19 +36,19 @@ func Init(path string, bare bool, storage storage.ObjectStore) (*Repository, err
 		}
 	}
 
-	for k,v := range files {
+	for k, v := range files {
 		if err := ioutil.WriteFile(filepath.Join(repoPath, k), v, 0644); err != nil {
 			return nil, err
 		}
 	}
 
 	config, err := createConfig(
-		filepath.Join(repoPath, "config"), map[string]string { "bare": strconv.FormatBool(bare)})
+		filepath.Join(repoPath, "config"), map[string]string{"bare": strconv.FormatBool(bare)})
 	if err != nil {
 		return nil, err
 	}
 
-	repo:= NewRepo(repoPath,storage, config)
+	repo := NewRepo(filepath.Dir(repoPath), storage, config)
 	return repo, nil
 }
 
@@ -57,15 +57,15 @@ func InitDefault(path string, bare bool) (*Repository, error) {
 	return repo, err
 }
 
-func NewRepo(path string, store storage.ObjectStore, config *RepoConfig) *Repository{
+func NewRepo(path string, store storage.ObjectStore, config *RepoConfig) *Repository {
 	return &Repository{
 		Location: path,
-		Storage: store,
-		Config: config,
+		Storage:  store,
+		Config:   config,
 	}
 }
 
-func FromExisting(path string) (*Repository, error){
+func FromExisting(path string) (*Repository, error) {
 	if path == filepath.Dir(path) {
 		return nil, fmt.Errorf("fatal: not a git repository (or any of the parent directories)")
 	}
@@ -77,15 +77,15 @@ func FromExisting(path string) (*Repository, error){
 
 	return &Repository{
 		Location: path,
-		Storage: storage.NewFsStore(gitPath),
-		Config: &RepoConfig{ location: path},
+		Storage:  storage.NewFsStore(gitPath),
+		Config:   &RepoConfig{location: path},
 	}, nil
 }
 
 func createConfig(configPath string, values map[string]string) (*RepoConfig, error) {
-	config:= ini.Empty()
+	config := ini.Empty()
 	coreSection, err := config.NewSection("core")
-	if err!= nil {
+	if err != nil {
 		return nil, err
 	}
 
@@ -101,10 +101,9 @@ func createConfig(configPath string, values map[string]string) (*RepoConfig, err
 	}
 
 	config.SaveTo(configPath)
-	repoConfig :=RepoConfig{
+	repoConfig := RepoConfig{
 		location: configPath,
 	}
 
 	return &repoConfig, nil
 }
-

@@ -8,7 +8,7 @@ import (
 
 func main() {
 	rootCmd := setupCommands()
-	if err:= rootCmd.Execute(); err != nil {
+	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
@@ -27,6 +27,9 @@ func setupCommands() *cobra.Command {
 
 	catFile := cmd.SetupCatFileCmd(cmdContext)
 	rootCmd.AddCommand(catFile)
+
+	writeTree := cmd.SetupWriteTreeCmd(cmdContext)
+	rootCmd.AddCommand(writeTree)
 
 	return rootCmd
 }
