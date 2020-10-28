@@ -1,22 +1,30 @@
 package objects
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/furisto/gog/storage"
 	hasher "github.com/furisto/gog/util"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
+var TreeType = []byte("tree")
+
 type Tree struct {
-	oid   string
-	size  uint32
-	Trees []TreeEntry
-	Blobs []TreeEntry
+	oid     string
+	size    uint32
+	Trees   []TreeEntry
+	Blobs   []TreeEntry
+	entries []TreeEntry
 }
 
 func NewTreeFromDirectory(path string, prefix string) (*Tree, error) {
@@ -70,7 +78,67 @@ func NewTreeFromDirectory(path string, prefix string) (*Tree, error) {
 }
 
 func LoadTree(treeData []byte) (*Tree, error) {
-	return nil, nil
+	if !IsTree(treeData) {
+		return nil, errors.New("not of type tree")
+	}
+
+	byteReader := bytes.NewReader(treeData[5:]) // start reading after "tree "
+	reader := bufio.NewReader(byteReader)
+	reader.Reset(byteReader)
+	sizeSlice, err := reader.ReadString(byte(0))
+	if err != nil {
+		return nil, err
+	}
+
+	tree := new(Tree)
+
+	sizeInt, err := strconv.Atoi(sizeSlice[:len(sizeSlice)-1])
+	if err != nil {
+		return nil, err
+	}
+	tree.size = uint32(sizeInt)
+
+	for {
+		modeString, err := reader.ReadString(' ')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+		}
+		modeString = modeString[:len(modeString)-1]
+		modeNumber, err := strconv.ParseUint(modeString, 8, 32)
+		if err != nil {
+			return nil, err
+		}
+
+		mode := os.FileMode(modeNumber)
+
+		name, err := reader.ReadString(byte(0))
+		if err != nil {
+			return nil, err
+		}
+		name = name[:len(name)-1] // remove null byte
+
+		var oid = make([]byte, 20)
+		_, err = io.ReadFull(reader, oid)
+		if err != nil {
+			return nil, err
+		}
+
+		treeEntry := TreeEntry{
+			Mode: mode,
+			Name: name,
+			OID:  hex.EncodeToString(oid),
+		}
+
+		tree.entries = append(tree.entries, treeEntry)
+	}
+
+	return tree, nil
+}
+
+func IsTree(data []byte) bool {
+	return bytes.HasPrefix(data, TreeType)
 }
 
 func (t *Tree) OID() string {
@@ -91,6 +159,13 @@ func (t *Tree) SetSize(size uint32) {
 
 func (t *Tree) Type() string {
 	return "Tree"
+}
+
+func (t *Tree) Entries() []TreeEntry {
+	//all := append(t.Blobs, t.Trees...)
+	sort.Sort(treeEntrySorter(t.entries))
+
+	return t.entries
 }
 
 func (t *Tree) Bytes() []byte {
@@ -131,6 +206,7 @@ func (t *Tree) getContent() []byte {
 type TreeEntry struct {
 	Mode   os.FileMode
 	Name   string
+	OID    string
 	Object Object
 }
 

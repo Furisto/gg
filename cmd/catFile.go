@@ -12,13 +12,13 @@ import (
 
 func SetupCatFileCmd(context CommandContext) *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "cat-file",
+		Use:   "cat-file",
 		Short: "Provide content or type and size information for repository objects",
 	}
 
 	cmd.Args = cobra.ExactArgs(1)
 
-	options:= CatFileOptions{}
+	options := CatFileOptions{}
 	cmd.Flags().BoolVarP(&options.Pretty, "", "p", false, "pretty-print object's content")
 	cmd.Flags().BoolVarP(&options.Size, "", "s", false, "")
 	cmd.Flags().BoolVarP(&options.Type, "", "t", false, "")
@@ -39,10 +39,10 @@ func SetupCatFileCmd(context CommandContext) *cobra.Command {
 }
 
 type CatFileOptions struct {
-	OID string
-	Path string
-	Type bool
-	Size bool
+	OID    string
+	Path   string
+	Type   bool
+	Size   bool
 	Pretty bool
 }
 
@@ -87,17 +87,20 @@ func (cmd *CatFileCmd) Execute(options CatFileOptions) error {
 		if err != nil {
 			return err
 		}
+	} else if objects.IsTree(data) {
+		o, err = objects.LoadTree(data)
+		if err != nil {
+			return err
+		}
 	} else {
 		return errors.New("Invalid object type")
 	}
 
 	if options.Size {
 		fmt.Fprintf(cmd.writer, "%v", o.Size())
-	} else
-	if options.Type {
+	} else if options.Type {
 		fmt.Fprintf(cmd.writer, "%v", o.Type())
-	} else
-	if options.Pretty {
+	} else if options.Pretty {
 		output, err := objects.FormatObject(o)
 		if err != nil {
 			return err

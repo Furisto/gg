@@ -57,9 +57,9 @@ func populateRepo(path string) error {
 			return err
 		}
 
-		for i := 0; i < 2; i++ {
-			v := strconv.Itoa(i)
-			if err := ioutil.WriteFile(filepath.Join(dirName, v), []byte(dirName+v), 0644); err != nil {
+		for j := 0; j < 2; j++ {
+			v := strconv.Itoa(j)
+			if err := ioutil.WriteFile(filepath.Join(dirName, v), []byte(strconv.Itoa(i)+v), 0644); err != nil {
 				return err
 			}
 		}
