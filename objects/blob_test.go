@@ -19,12 +19,12 @@ func TestCreateBlob(t *testing.T) {
 
 	const oid = "34c92c2d93d8cdb680b66118dd37551caa0b4a25"
 	if blob.OID() != oid {
-		t.Errorf("Expected oid of %v, but was %v", oid, blob.OID)
+		t.Errorf("Expected oid of %v, but was %v", oid, blob.OID())
 	}
 
 	const size = 11
 	if blob.Size() != 11 {
-		t.Errorf("Expected blob size of %v, but was %v", 11, blob.Size)
+		t.Errorf("Expected blob size of %v, but was %v", 11, blob.Size())
 	}
 
 	if bytes.Compare(blob.Content, []byte("lorem ipsum")) != 0 {
