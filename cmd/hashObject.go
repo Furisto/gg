@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/furisto/gog/objects"
+	"github.com/furisto/gog/plumbing/objects"
 	"github.com/furisto/gog/repo"
 	"github.com/spf13/cobra"
 	"io"
@@ -12,7 +12,7 @@ import (
 
 func SetupHashObjectCmd(context CommandContext) *cobra.Command {
 	hashObjectCmd := &cobra.Command{
-		Use: "hash-object",
+		Use:   "hash-object",
 		Short: "Compute object ID and optionally creates a blob from a file",
 	}
 
@@ -35,7 +35,7 @@ func SetupHashObjectCmd(context CommandContext) *cobra.Command {
 }
 
 type HashObjectOptions struct {
-	file string
+	file  string
 	store bool
 }
 
@@ -49,7 +49,7 @@ func NewHashObjectCmd(writer io.Writer) HashObjectCommand {
 	}
 }
 
-func (cmd *HashObjectCommand) Execute(options HashObjectOptions) error{
+func (cmd *HashObjectCommand) Execute(options HashObjectOptions) error {
 	stat, err := os.Stat(options.file)
 	if err != nil {
 		return fmt.Errorf("fatal: Cannot open '%v': No such file or directory", options.file)

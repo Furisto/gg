@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"errors"
-	"github.com/furisto/gog/objects"
+	"github.com/furisto/gog/plumbing/objects"
 	"github.com/furisto/gog/repo"
 	"github.com/spf13/cobra"
 	"io"

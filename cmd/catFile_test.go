@@ -3,7 +3,7 @@ package cmd
 import (
 	"bufio"
 	"bytes"
-	"github.com/furisto/gog/objects"
+	"github.com/furisto/gog/plumbing/objects"
 	"github.com/furisto/gog/repo"
 	"github.com/furisto/gog/storage"
 	"github.com/furisto/gog/util"

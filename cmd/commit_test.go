@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"bytes"
-	"github.com/furisto/gog/objects"
+	"github.com/furisto/gog/plumbing/objects"
 	"github.com/furisto/gog/repo"
 	"os"
 	"testing"
