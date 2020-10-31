@@ -31,5 +31,8 @@ func setupCommands() *cobra.Command {
 	writeTree := cmd.SetupWriteTreeCmd(cmdContext)
 	rootCmd.AddCommand(writeTree)
 
+	commit := cmd.SetupCommitCmd(cmdContext)
+	rootCmd.AddCommand(commit)
+
 	return rootCmd
 }
