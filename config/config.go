@@ -1,7 +1,9 @@
-package repo
+package config
+
+import "errors"
 
 type RepoConfig struct {
-	location string
+	Location string
 }
 
 func (config *RepoConfig) Set(section string, key string, value string) error {
@@ -9,5 +11,5 @@ func (config *RepoConfig) Set(section string, key string, value string) error {
 }
 
 func (config *RepoConfig) Get(section string, key string) (string, error) {
-	return "", nil
+	return "", errors.New("not implemented")
 }

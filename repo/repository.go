@@ -2,6 +2,7 @@ package repo
 
 import (
 	"fmt"
+	"github.com/furisto/gog/config"
 	"github.com/furisto/gog/storage"
 	"gopkg.in/ini.v1"
 	"io/ioutil"
@@ -13,7 +14,7 @@ import (
 type Repository struct {
 	Location string
 	Storage  storage.ObjectStore
-	Config   *RepoConfig
+	Config   *config.RepoConfig
 }
 
 func Init(path string, bare bool, storage storage.ObjectStore) (*Repository, error) {
@@ -57,7 +58,7 @@ func InitDefault(path string, bare bool) (*Repository, error) {
 	return repo, err
 }
 
-func NewRepo(path string, store storage.ObjectStore, config *RepoConfig) *Repository {
+func NewRepo(path string, store storage.ObjectStore, config *config.RepoConfig) *Repository {
 	return &Repository{
 		Location: path,
 		Storage:  store,
@@ -78,13 +79,13 @@ func FromExisting(path string) (*Repository, error) {
 	return &Repository{
 		Location: path,
 		Storage:  storage.NewFsStore(gitPath),
-		Config:   &RepoConfig{location: path},
+		Config:   &config.RepoConfig{Location: path},
 	}, nil
 }
 
-func createConfig(configPath string, values map[string]string) (*RepoConfig, error) {
-	config := ini.Empty()
-	coreSection, err := config.NewSection("core")
+func createConfig(configPath string, values map[string]string) (*config.RepoConfig, error) {
+	conf := ini.Empty()
+	coreSection, err := conf.NewSection("core")
 	if err != nil {
 		return nil, err
 	}
@@ -100,9 +101,9 @@ func createConfig(configPath string, values map[string]string) (*RepoConfig, err
 		}
 	}
 
-	config.SaveTo(configPath)
-	repoConfig := RepoConfig{
-		location: configPath,
+	conf.SaveTo(configPath)
+	repoConfig := config.RepoConfig{
+		Location: configPath,
 	}
 
 	return &repoConfig, nil
