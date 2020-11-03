@@ -4,17 +4,23 @@ import (
 	"fmt"
 	"github.com/furisto/gog/config"
 	"github.com/furisto/gog/storage"
-	"gopkg.in/ini.v1"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 )
 
+var defaultConfigValues = map[string]string{
+	"repositoryformatversion": "0",
+	"filemode":                "false",
+	"symlinks":                "false",
+	"ignorecase":              "true",
+}
+
 type Repository struct {
 	Location string
 	Storage  storage.ObjectStore
-	Config   *config.RepoConfig
+	Config   config.Config
 }
 
 func Init(path string, bare bool, storage storage.ObjectStore) (*Repository, error) {
@@ -43,13 +49,13 @@ func Init(path string, bare bool, storage storage.ObjectStore) (*Repository, err
 		}
 	}
 
-	config, err := createConfig(
+	cfg, err := createConfig(
 		filepath.Join(repoPath, "config"), map[string]string{"bare": strconv.FormatBool(bare)})
 	if err != nil {
 		return nil, err
 	}
 
-	repo := NewRepo(filepath.Dir(repoPath), storage, config)
+	repo := NewRepo(filepath.Dir(repoPath), storage, cfg)
 	return repo, nil
 }
 
@@ -58,11 +64,11 @@ func InitDefault(path string, bare bool) (*Repository, error) {
 	return repo, err
 }
 
-func NewRepo(path string, store storage.ObjectStore, config *config.RepoConfig) *Repository {
+func NewRepo(path string, store storage.ObjectStore, cfg config.Config) *Repository {
 	return &Repository{
 		Location: path,
 		Storage:  store,
-		Config:   config,
+		Config:   cfg,
 	}
 }
 
@@ -76,35 +82,36 @@ func FromExisting(path string) (*Repository, error) {
 		return FromExisting(filepath.Dir(path))
 	}
 
-	return &Repository{
-		Location: path,
-		Storage:  storage.NewFsStore(gitPath),
-		Config:   &config.RepoConfig{Location: path},
-	}, nil
-}
-
-func createConfig(configPath string, values map[string]string) (*config.RepoConfig, error) {
-	conf := ini.Empty()
-	coreSection, err := conf.NewSection("core")
+	cfg, err := config.CreateDefaultConfigBuilder(filepath.Join(path, ".git", "config"))
 	if err != nil {
 		return nil, err
 	}
 
-	coreSection.NewKey("repositoryformatversion", "0")
-	coreSection.NewKey("filemode", "false")
-	coreSection.NewKey("symlinks", "false")
-	coreSection.NewKey("ignorecase", "true")
+	return &Repository{
+		Location: path,
+		Storage:  storage.NewFsStore(gitPath),
+		Config:   cfg.Build(),
+	}, nil
+}
 
-	for k, v := range values {
-		if _, err := coreSection.NewKey(k, v); err != nil {
+func createConfig(configPath string, values map[string]string) (config.Config, error) {
+	cb, err := config.CreateDefaultConfigBuilder(configPath)
+	if err != nil {
+		return nil, err
+	}
+	cfg := cb.Build()
+
+	for k, v := range defaultConfigValues {
+		if err := cfg.Set("core", k, v); err != nil {
 			return nil, err
 		}
 	}
 
-	conf.SaveTo(configPath)
-	repoConfig := config.RepoConfig{
-		Location: configPath,
+	for k, v := range values {
+		if err := cfg.Set("core", k, v); err != nil {
+			return nil, err
+		}
 	}
 
-	return &repoConfig, nil
+	return cfg, nil
 }

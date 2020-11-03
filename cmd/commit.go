@@ -62,8 +62,7 @@ func (cmd *CommitCommand) Execute(options CommitOptions) (*objects.Commit, error
 	}
 
 	commit, err := objects.NewCommitBuilder(tree.OID()).
-		WithAuthor("furisto", "furisto@test.com").
-		WithCommitter("furisto", "furisto@test.com").
+		WithConfig(r.Config).
 		WithMessage(options.Message).
 		Build()
 

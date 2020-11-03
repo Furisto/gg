@@ -286,11 +286,13 @@ type CommitBuilder struct {
 	committerEmail string
 	parentOids     []string
 	message        string
+	config         config.Config
 }
 
 func NewCommitBuilder(treeOid string) *CommitBuilder {
 	return &CommitBuilder{
-		tree: treeOid,
+		tree:   treeOid,
+		config: &config.NilConfig{},
 	}
 }
 
@@ -316,26 +318,30 @@ func (cb *CommitBuilder) WithMessage(message string) *CommitBuilder {
 	return cb
 }
 
+func (cb *CommitBuilder) WithConfig(cfg config.Config) *CommitBuilder {
+	cb.config = cfg
+	return cb
+}
+
 func (cb *CommitBuilder) Build() (*Commit, error) {
-	config := config.RepoConfig{}
 	var err error
 
 	if cb.authorName == "" && cb.authorEmail == "" {
-		if cb.authorName, err = config.Get("user", "name"); err != nil {
+		if cb.authorName, err = cb.config.Get("user", "name"); err != nil {
 			cb.authorName = "unknown"
 		}
 
-		if cb.authorEmail, err = config.Get("user", "email"); err != nil {
+		if cb.authorEmail, err = cb.config.Get("user", "email"); err != nil {
 			cb.authorEmail = "unknown"
 		}
 	}
 
 	if cb.committerName == "" && cb.committerEmail == "" {
-		if cb.committerName, err = config.Get("user", "name"); err != nil {
+		if cb.committerName, err = cb.config.Get("user", "name"); err != nil {
 			cb.committerName = "unknown"
 		}
 
-		if cb.committerEmail, err = config.Get("user", "email"); err != nil {
+		if cb.committerEmail, err = cb.config.Get("user", "email"); err != nil {
 			cb.committerEmail = "unknown"
 		}
 	}

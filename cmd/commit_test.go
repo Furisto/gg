@@ -9,8 +9,6 @@ import (
 )
 
 const CommitMessage = "Test"
-const CommmitOID = ""
-const CommitTreeOID = ""
 
 func TestCommit(t *testing.T) {
 	r, err := prepareEnvForCommitTest()
@@ -33,7 +31,7 @@ func TestCommit(t *testing.T) {
 
 	data, err := r.Storage.Get(commit.OID())
 	if err != nil {
-		t.Errorf("could not find expected commit %v", CommmitOID)
+		t.Errorf("could not find expected commit %v", commit.OID())
 	}
 
 	c, err := objects.DecodeCommit(commit.OID(), data)
@@ -66,6 +64,13 @@ func prepareEnvForCommitTest() (r *repo.Repository, err error) {
 	}
 
 	if err := populateRepo(r.Location); err != nil {
+		return nil, err
+	}
+
+	if err := r.Config.Set("user", "name", "furisto"); err != nil {
+		return nil, err
+	}
+	if err := r.Config.Set("user", "email", "furisto@test.com"); err != nil {
 		return nil, err
 	}
 
