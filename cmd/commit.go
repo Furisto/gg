@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/furisto/gog/plumbing/objects"
+	"github.com/furisto/gog/plumbing/refs"
 	"github.com/furisto/gog/repo"
 	"github.com/spf13/cobra"
 	"io"
@@ -61,8 +62,32 @@ func (cmd *CommitCommand) Execute(options CommitOptions) (*objects.Commit, error
 		return nil, err
 	}
 
+	headRef, err := r.Head()
+	if err != nil {
+		return nil, err
+	}
+	parentRef, err := r.Refs.Resolve(headRef)
+	if err != nil {
+		if err != refs.ErrRefNotExist {
+			return nil, err
+		}
+
+		_, err := r.Branches.Get("master")
+		if err != refs.ErrRefNotExist {
+			return nil, err
+		}
+
+		master, err := r.Branches.Create("master", "")
+		if err != nil {
+			return nil, err
+		}
+
+		parentRef = master
+	}
+
 	commit, err := objects.NewCommitBuilder(tree.OID()).
 		WithConfig(r.Config).
+		WithParent(parentRef.RefValue).
 		WithMessage(options.Message).
 		Build()
 
@@ -71,5 +96,13 @@ func (cmd *CommitCommand) Execute(options CommitOptions) (*objects.Commit, error
 	}
 
 	err = commit.Save(r.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := r.Refs.Set(parentRef.Name, commit.OID()); err != nil {
+		return nil, err
+	}
+
 	return commit, err
 }

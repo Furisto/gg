@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"github.com/furisto/gog/plumbing/objects"
+	"github.com/furisto/gog/plumbing/refs"
 	"github.com/furisto/gog/repo"
 	"github.com/furisto/gog/storage"
 	"github.com/furisto/gog/util"
@@ -250,8 +251,10 @@ func CreateTestRepository() (*repo.Repository, error) {
 		return nil, err
 	}
 
-	store := storage.NewFsStore(filepath.Join(dir, ".git"))
-	r, err := repo.Init(dir, false, store)
+	gitDir := filepath.Join(dir, ".git")
+	store := storage.NewFsStore(gitDir)
+	refs := refs.NewGitRefManager(gitDir)
+	r, err := repo.Init(dir, false, store, refs)
 	if err != nil {
 		return nil, err
 	}

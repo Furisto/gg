@@ -9,14 +9,64 @@ import (
 )
 
 const CommitMessage = "Test"
+const ParentCommit = "48743154a35f5751796d39ebceb615453abac8de"
 
-func TestCommit(t *testing.T) {
-	r, err := prepareEnvForCommitTest()
+func TestFirstCommitInRepository(t *testing.T) {
+	r, err := prepareEnvWithNoCommmits()
 	if err != nil {
 		t.Fatalf("could not create test repository: %v", err)
 	}
 	defer os.RemoveAll(r.Location)
 
+	commit := createCommit(r, t)
+	checkCommit(commit, t, r)
+}
+
+func TestSubsequentCommitInRepository(t *testing.T) {
+	r, err := prepareEnvWithCommits()
+	if err != nil {
+		t.Fatalf("could not create test repository: %v", err)
+	}
+	defer os.RemoveAll(r.Location)
+
+	commit := createCommit(r, t)
+	checkCommit(commit, t, r)
+}
+
+func prepareEnvWithNoCommmits() (r *repo.Repository, err error) {
+	r, err = CreateTestRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := populateRepo(r.Location); err != nil {
+		return nil, err
+	}
+
+	if err := r.Config.Set("user", "name", "furisto"); err != nil {
+		return nil, err
+	}
+	if err := r.Config.Set("user", "email", "furisto@test.com"); err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func prepareEnvWithCommits() (r *repo.Repository, err error) {
+	r, err = prepareEnvWithNoCommmits()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := r.Branches.Create("master", ParentCommit); err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func createCommit(r *repo.Repository, t *testing.T) *objects.Commit {
 	options := CommitOptions{
 		Path:    r.Location,
 		Message: "Test",
@@ -29,6 +79,10 @@ func TestCommit(t *testing.T) {
 		t.Fatalf("error encountered durign command execution: %v", err)
 	}
 
+	return commit
+}
+
+func checkCommit(commit *objects.Commit, t *testing.T, r *repo.Repository) {
 	data, err := r.Storage.Get(commit.OID())
 	if err != nil {
 		t.Errorf("could not find expected commit %v", commit.OID())
@@ -55,24 +109,14 @@ func TestCommit(t *testing.T) {
 		t.Errorf(
 			"commit does not contain the expected message '%v', the message was '%v'", CommitMessage, commit.Message)
 	}
-}
 
-func prepareEnvForCommitTest() (r *repo.Repository, err error) {
-	r, err = CreateTestRepository()
+	master, err := r.Branches.Get("master")
 	if err != nil {
-		return nil, err
+		t.Errorf("master branch has not been created")
+		return
 	}
 
-	if err := populateRepo(r.Location); err != nil {
-		return nil, err
+	if master.RefValue != commit.OID() {
+		t.Errorf("master branch does not have the expected commit of %v", commit.OID())
 	}
-
-	if err := r.Config.Set("user", "name", "furisto"); err != nil {
-		return nil, err
-	}
-	if err := r.Config.Set("user", "email", "furisto@test.com"); err != nil {
-		return nil, err
-	}
-
-	return r, nil
 }

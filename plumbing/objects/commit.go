@@ -81,7 +81,7 @@ func DecodeCommit(oid string, data []byte) (*Commit, error) {
 			return nil, err
 		}
 
-		if !bytes.Equal(parentPrefix, []byte("Parent")) {
+		if !bytes.Equal(parentPrefix, []byte("parent")) {
 			break
 		}
 
@@ -136,7 +136,9 @@ func DecodeCommit(oid string, data []byte) (*Commit, error) {
 		return nil, err
 	}
 
-	reader.ReadBytes('\n')
+	if _, err := reader.ReadBytes('\n'); err != nil {
+		return nil, err
+	}
 
 	message, err := ioutil.ReadAll(reader)
 	if err != nil {
@@ -297,7 +299,9 @@ func NewCommitBuilder(treeOid string) *CommitBuilder {
 }
 
 func (cb *CommitBuilder) WithParent(parentOid string) *CommitBuilder {
-	cb.parentOids = append(cb.parentOids, parentOid)
+	if parentOid != "" {
+		cb.parentOids = append(cb.parentOids, parentOid)
+	}
 	return cb
 }
 

@@ -3,6 +3,7 @@ package repo
 import (
 	"fmt"
 	"github.com/furisto/gog/config"
+	"github.com/furisto/gog/plumbing/refs"
 	"github.com/furisto/gog/storage"
 	"io/ioutil"
 	"os"
@@ -21,9 +22,11 @@ type Repository struct {
 	Location string
 	Storage  storage.ObjectStore
 	Config   config.Config
+	Refs     refs.RefManager
+	Branches Branches
 }
 
-func Init(path string, bare bool, storage storage.ObjectStore) (*Repository, error) {
+func Init(path string, bare bool, storage storage.ObjectStore, refs refs.RefManager) (*Repository, error) {
 	var repoPath string
 	if bare {
 		repoPath = path
@@ -31,7 +34,7 @@ func Init(path string, bare bool, storage storage.ObjectStore) (*Repository, err
 		repoPath = filepath.Join(path, ".git")
 	}
 
-	directories := []string{"hooks", "info", "refs"}
+	directories := []string{"hooks", "info", "refs/heads", "refs/tags"}
 	files := map[string][]byte{
 		"description": []byte("Unnamed repository; edit this file 'description' to name the repository.\n"),
 		"HEAD":        []byte("ref: refs/heads/master"),
@@ -55,20 +58,22 @@ func Init(path string, bare bool, storage storage.ObjectStore) (*Repository, err
 		return nil, err
 	}
 
-	repo := NewRepo(filepath.Dir(repoPath), storage, cfg)
+	repo := NewRepo(filepath.Dir(repoPath), storage, cfg, refs)
 	return repo, nil
 }
 
 func InitDefault(path string, bare bool) (*Repository, error) {
-	repo, err := Init(path, bare, storage.NewFsStore(filepath.Join(path, ".git")))
+	repo, err := Init(path, bare, storage.NewFsStore(filepath.Join(path, ".git")), refs.NewGitRefManager(""))
 	return repo, err
 }
 
-func NewRepo(path string, store storage.ObjectStore, cfg config.Config) *Repository {
+func NewRepo(path string, store storage.ObjectStore, cfg config.Config, refs refs.RefManager) *Repository {
 	return &Repository{
 		Location: path,
 		Storage:  store,
 		Config:   cfg,
+		Refs:     refs,
+		Branches: NewBranches(refs),
 	}
 }
 
@@ -87,10 +92,14 @@ func FromExisting(path string) (*Repository, error) {
 		return nil, err
 	}
 
+	refs := refs.NewGitRefManager(gitPath)
+
 	return &Repository{
 		Location: path,
 		Storage:  storage.NewFsStore(gitPath),
 		Config:   cfg.Build(),
+		Refs:     refs,
+		Branches: NewBranches(refs),
 	}, nil
 }
 
@@ -114,4 +123,18 @@ func createConfig(configPath string, values map[string]string) (config.Config, e
 	}
 
 	return cfg, nil
+}
+
+func (ry *Repository) Head() (*refs.Ref, error) {
+	ref, err := ry.Refs.Get("head")
+	if err != nil {
+		return nil, err
+	}
+
+	return ref, nil
+}
+
+func (ry *Repository) SetHead(ref *refs.Ref) error {
+	_, err := ry.Refs.Set("head", ref.Name)
+	return err
 }
