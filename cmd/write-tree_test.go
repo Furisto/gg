@@ -2,10 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strconv"
 	"testing"
 )
 
@@ -16,7 +12,7 @@ func TestWriteTreeFromWorkingDirNoPrefix(t *testing.T) {
 		return
 	}
 
-	if err := populateRepo(r.Location); err != nil {
+	if err := PopulateRepo(r.Location); err != nil {
 		t.Fatal("")
 		return
 	}
@@ -48,22 +44,4 @@ func TestWriteTreeFromWorkingDirNoPrefix(t *testing.T) {
 			t.Errorf("expected data for key %v to be %v, but was %v", k, string(v), string(data))
 		}
 	}
-}
-
-func populateRepo(path string) error {
-	for i := 0; i < 5; i++ {
-		dirName := filepath.Join(path, strconv.Itoa(i))
-		if err := os.Mkdir(dirName, os.ModeDir); err != nil {
-			return err
-		}
-
-		for j := 0; j < 2; j++ {
-			v := strconv.Itoa(j)
-			if err := ioutil.WriteFile(filepath.Join(dirName, v), []byte(strconv.Itoa(i)+v), 0644); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 }

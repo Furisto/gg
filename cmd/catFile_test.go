@@ -4,12 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"github.com/furisto/gog/plumbing/objects"
-	"github.com/furisto/gog/plumbing/refs"
 	"github.com/furisto/gog/repo"
-	"github.com/furisto/gog/storage"
-	"github.com/furisto/gog/util"
 	"io"
-	"path/filepath"
 	"strconv"
 	"testing"
 )
@@ -230,7 +226,7 @@ func prepareEnvForTreeTest() (r *repo.Repository, tree *objects.Tree, err error)
 		return nil, nil, err
 	}
 
-	if err := populateRepo(r.Location); err != nil {
+	if err := PopulateRepo(r.Location); err != nil {
 		return nil, nil, err
 	}
 
@@ -243,21 +239,4 @@ func prepareEnvForTreeTest() (r *repo.Repository, tree *objects.Tree, err error)
 	}
 
 	return r, tree, nil
-}
-
-func CreateTestRepository() (*repo.Repository, error) {
-	dir, err := util.CreateTemporaryDir()
-	if err != nil {
-		return nil, err
-	}
-
-	gitDir := filepath.Join(dir, ".git")
-	store := storage.NewFsStore(gitDir)
-	refs := refs.NewGitRefManager(gitDir)
-	r, err := repo.Init(dir, false, store, refs)
-	if err != nil {
-		return nil, err
-	}
-
-	return r, err
 }
