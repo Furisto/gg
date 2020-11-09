@@ -289,6 +289,7 @@ type CommitBuilder struct {
 	parentOids     []string
 	message        string
 	config         config.Config
+	hook           func(*Commit)
 }
 
 func NewCommitBuilder(treeOid string) *CommitBuilder {
@@ -327,6 +328,10 @@ func (cb *CommitBuilder) WithConfig(cfg config.Config) *CommitBuilder {
 	return cb
 }
 
+func (cb *CommitBuilder) WithHook(hook func(*Commit)) {
+	cb.hook = hook
+}
+
 func (cb *CommitBuilder) Build() (*Commit, error) {
 	var err error
 
@@ -358,6 +363,8 @@ func (cb *CommitBuilder) Build() (*Commit, error) {
 		Message:  cb.message,
 	}
 
+	cb.hook(&c)
+
 	var content bytes.Buffer
 	if err := c.writeContent(&content); err != nil {
 		return nil, err
@@ -388,16 +395,17 @@ func DecodeSignature(data []byte) (*Signature, error) {
 
 	name := splits[0]
 	mail := bytes.Trim(splits[1], "<>")
-	if len(splits) >= 4 {
 
-	} else {
-
+	n, err := strconv.ParseInt(string(splits[2]), 10, 64)
+	if err != nil {
+		return nil, err
 	}
+	timestamp := time.Unix(n, 0)
 
 	return &Signature{
 		Name:      string(name),
 		Email:     string(mail),
-		TimeStamp: time.Now(),
+		TimeStamp: timestamp,
 	}, nil
 }
 

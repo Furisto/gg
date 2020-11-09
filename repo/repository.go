@@ -3,6 +3,7 @@ package repo
 import (
 	"fmt"
 	"github.com/furisto/gog/config"
+	"github.com/furisto/gog/plumbing/objects"
 	"github.com/furisto/gog/plumbing/refs"
 	"github.com/furisto/gog/storage"
 	"io/ioutil"
@@ -137,4 +138,59 @@ func (ry *Repository) Head() (*refs.Ref, error) {
 func (ry *Repository) SetHead(ref *refs.Ref) error {
 	_, err := ry.Refs.Set("head", ref.Name)
 	return err
+}
+
+func (ry *Repository) Commit(configure func(builder *objects.CommitBuilder) *objects.CommitBuilder) (*objects.Commit, error) {
+	tree, err := objects.NewTreeFromDirectory(ry.Location, "")
+	if err != nil {
+		return nil, err
+	}
+	if err := tree.Save(ry.Storage); err != nil {
+		return nil, err
+	}
+
+	headRef, err := ry.Head()
+	if err != nil {
+		return nil, err
+	}
+	parentRef, err := ry.Refs.Resolve(headRef)
+	if err != nil {
+		if err != refs.ErrRefNotExist {
+			return nil, err
+		}
+
+		_, err := ry.Branches.Get("master")
+		if err != refs.ErrRefNotExist {
+			return nil, err
+		}
+
+		master, err := ry.Branches.Create("master", "")
+		if err != nil {
+			return nil, err
+		}
+
+		parentRef = master
+	}
+
+	builder := objects.NewCommitBuilder(tree.OID()).
+		WithConfig(ry.Config).
+		WithParent(parentRef.RefValue)
+
+	builder = configure(builder)
+	commit, err := builder.Build()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = commit.Save(ry.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := ry.Refs.Set(parentRef.Name, commit.OID()); err != nil {
+		return nil, err
+	}
+
+	return commit, nil
 }

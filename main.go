@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/furisto/gog/cmd"
+	"github.com/furisto/gog/cmd/log"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -33,6 +34,9 @@ func setupCommands() *cobra.Command {
 
 	commit := cmd.SetupCommitCmd(cmdContext)
 	rootCmd.AddCommand(commit)
+
+	log := log.SetupLogCmd(cmdContext)
+	rootCmd.AddCommand(log)
 
 	return rootCmd
 }
