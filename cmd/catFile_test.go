@@ -13,10 +13,7 @@ import (
 const BlobContent = "Hello Git!"
 
 func TestPrintSizeOfBlob(t *testing.T) {
-	r, blob, err := prepareEnvForBlobTest()
-	if err != nil {
-		t.Fatalf("could not prepare test environment: %v", err)
-	}
+	r, blob := prepareEnvForBlobTest(t)
 
 	options := CatFileOptions{
 		OID:    blob.OID(),
@@ -44,10 +41,7 @@ func TestPrintSizeOfBlob(t *testing.T) {
 }
 
 func TestPrintTypeOfBlob(t *testing.T) {
-	r, blob, err := prepareEnvForBlobTest()
-	if err != nil {
-		t.Fatalf("could not prepare test environment: %v", err)
-	}
+	r, blob := prepareEnvForBlobTest(t)
 
 	options := CatFileOptions{
 		OID:    blob.OID(),
@@ -69,10 +63,7 @@ func TestPrintTypeOfBlob(t *testing.T) {
 }
 
 func TestPrettyPrintOfBlob(t *testing.T) {
-	r, blob, err := prepareEnvForBlobTest()
-	if err != nil {
-		t.Fatalf("could not prepare test environment: %v", err)
-	}
+	r, blob := prepareEnvForBlobTest(t)
 
 	options := CatFileOptions{
 		OID:    blob.OID(),
@@ -94,10 +85,7 @@ func TestPrettyPrintOfBlob(t *testing.T) {
 }
 
 func TestPrintSizeOfTree(t *testing.T) {
-	r, tree, err := prepareEnvForTreeTest()
-	if err != nil {
-		t.Fatalf("could not prepare test environment: %v", err)
-	}
+	r, tree := prepareEnvForTreeTest(t)
 
 	options := CatFileOptions{
 		OID:    tree.OID(),
@@ -121,10 +109,7 @@ func TestPrintSizeOfTree(t *testing.T) {
 }
 
 func TestPrintTypeOfTree(t *testing.T) {
-	r, tree, err := prepareEnvForTreeTest()
-	if err != nil {
-		t.Fatalf("could not prepare test environment: %v", err)
-	}
+	r, tree := prepareEnvForTreeTest(t)
 
 	options := CatFileOptions{
 		OID:    tree.OID(),
@@ -147,10 +132,7 @@ func TestPrintTypeOfTree(t *testing.T) {
 }
 
 func TestPrettyPrintOfTree(t *testing.T) {
-	r, tree, err := prepareEnvForTreeTest()
-	if err != nil {
-		t.Fatalf("could not prepare test environment: %v", err)
-	}
+	r, tree := prepareEnvForTreeTest(t)
 
 	options := CatFileOptions{
 		OID:    tree.OID(),
@@ -206,37 +188,33 @@ func TestPrettyPrintOfTree(t *testing.T) {
 	}
 }
 
-func prepareEnvForBlobTest() (r *repo.Repository, blob *objects.Blob, err error) {
-	r, err = CreateTestRepository()
-	if err != nil {
-		return nil, nil, err
+func prepareEnvForBlobTest(t *testing.T) (*repo.Repository, *objects.Blob) {
+	t.Helper()
+
+	ry := createTestRepository(t)
+
+	blob := objects.NewBlob([]byte(BlobContent))
+	if err := ry.Storage.Put(blob.OID(), blob.Bytes()); err != nil {
+		t.Fatalf("")
 	}
 
-	blob = objects.NewBlob([]byte(BlobContent))
-	if err := r.Storage.Put(blob.OID(), blob.Bytes()); err != nil {
-		return nil, nil, err
-	}
-
-	return r, blob, nil
+	return ry, blob
 }
 
-func prepareEnvForTreeTest() (r *repo.Repository, tree *objects.Tree, err error) {
-	r, err = CreateTestRepository()
+func prepareEnvForTreeTest(t *testing.T) (*repo.Repository, *objects.Tree) {
+	t.Helper()
+
+	ry := createTestRepository(t)
+	populateRepo(t, ry.Location)
+
+	tree, err := objects.NewTreeFromDirectory(ry.Location, "")
 	if err != nil {
-		return nil, nil, err
+		t.Fatalf("could not create tree from directory: %v", err)
 	}
 
-	if err := PopulateRepo(r.Location); err != nil {
-		return nil, nil, err
+	if err := tree.Save(ry.Storage); err != nil {
+		t.Fatalf("could not save tree: %v", err)
 	}
 
-	tree, err = objects.NewTreeFromDirectory(r.Location, "")
-	if err != nil {
-		return nil, nil, err
-	}
-	if err := tree.Save(r.Storage); err != nil {
-		return nil, nil, err
-	}
-
-	return r, tree, nil
+	return ry, tree
 }

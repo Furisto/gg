@@ -1,10 +1,9 @@
-package cmd
+package repo
 
 import (
 	"crypto/rand"
 	"fmt"
 	"github.com/furisto/gog/plumbing/refs"
-	"github.com/furisto/gog/repo"
 	"github.com/furisto/gog/storage"
 	"io/ioutil"
 	"os"
@@ -53,10 +52,10 @@ func generateUUID(t *testing.T) string {
 	return uuid
 }
 
-func prepareEnvWithCommits(t *testing.T) *repo.Repository {
+func prepareEnvWithCommits(t *testing.T) *Repository {
 	t.Helper()
 
-	ry := PrepareEnvWithNoCommmits(t)
+	ry := prepareEnvWithNoCommmits(t)
 
 	if _, err := ry.Branches.Create("master", ParentCommit); err != nil {
 		t.Fatalf("could not create branch 'master'")
@@ -65,7 +64,7 @@ func prepareEnvWithCommits(t *testing.T) *repo.Repository {
 	return ry
 }
 
-func PrepareEnvWithNoCommmits(t *testing.T) *repo.Repository {
+func prepareEnvWithNoCommmits(t *testing.T) *Repository {
 	t.Helper()
 
 	ry := createTestRepository(t)
@@ -81,7 +80,7 @@ func PrepareEnvWithNoCommmits(t *testing.T) *repo.Repository {
 	return ry
 }
 
-func createTestRepository(t *testing.T) *repo.Repository {
+func createTestRepository(t *testing.T) *Repository {
 	t.Helper()
 
 	dir := createTemporaryDir(t)
@@ -89,12 +88,12 @@ func createTestRepository(t *testing.T) *repo.Repository {
 
 	store := storage.NewFsStore(gitDir)
 	refs := refs.NewGitRefManager(gitDir)
-	r, err := repo.Init(dir, false, store, refs)
+	ry, err := Init(dir, false, store, refs)
 	if err != nil {
 		t.Fatalf("could not initialize test repository: %v", err)
 	}
 
-	return r
+	return ry
 }
 
 func populateRepo(t *testing.T, path string) {

@@ -6,16 +6,8 @@ import (
 )
 
 func TestWriteTreeFromWorkingDirNoPrefix(t *testing.T) {
-	r, err := CreateTestRepository()
-	if err != nil {
-		t.Fatal("")
-		return
-	}
-
-	if err := PopulateRepo(r.Location); err != nil {
-		t.Fatal("")
-		return
-	}
+	r := createTestRepository(t)
+	populateRepo(t, r.Location)
 
 	options := WriteTreeOptions{
 		Path:                r.Location,

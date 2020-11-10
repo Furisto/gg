@@ -163,10 +163,7 @@ func TestLogWithCombinedOptions(t *testing.T) {
 func prepareEnvForLogTests(t *testing.T) LogTestEnv {
 	t.Helper()
 
-	r, err := cmd.PrepareEnvWithNoCommmits()
-	if err != nil {
-		t.Fatalf("")
-	}
+	r := cmd.PrepareEnvWithNoCommmits(t)
 
 	dates := []time.Time{
 		time.Date(2020, 11, 8, 18, 0, 0, 0, time.UTC),

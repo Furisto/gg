@@ -5,7 +5,6 @@ import (
 	"github.com/furisto/gog/plumbing/refs"
 	"github.com/furisto/gog/repo"
 	"github.com/furisto/gog/storage"
-	"github.com/furisto/gog/util"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -18,7 +17,7 @@ var hashedContent = []byte("57ea241164ccfd0b63d58eb247d52a670514b370")
 func TestHashObjectOnlyNoRepository(t *testing.T) {
 	output := bytes.Buffer{}
 
-	file, err := util.CreateTemporaryFile()
+	file, err := createTemporaryFile(t)
 	if err != nil {
 		t.Fatalf("Could not create temporary file: %v", err)
 		return
@@ -44,11 +43,8 @@ func TestHashObjectOnlyNoRepository(t *testing.T) {
 }
 
 func TestHashAndStore(t *testing.T) {
-	repoDir, err := util.CreateTemporaryDir()
-	if err != nil {
-		t.Fatalf("Could not create temporary directory: %v", err)
-		return
-	}
+	repoDir := createTemporaryDir(t)
+
 	defer os.RemoveAll(repoDir)
 	output := bytes.Buffer{}
 

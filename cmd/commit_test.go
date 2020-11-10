@@ -11,10 +11,7 @@ import (
 const CommitMessage = "Test"
 
 func TestFirstCommitInRepository(t *testing.T) {
-	r, err := PrepareEnvWithNoCommmits()
-	if err != nil {
-		t.Fatalf("could not create test repository: %v", err)
-	}
+	r := PrepareEnvWithNoCommmits(t)
 	defer os.RemoveAll(r.Location)
 
 	commit := executeCommitCmd(r, t)
@@ -22,10 +19,7 @@ func TestFirstCommitInRepository(t *testing.T) {
 }
 
 func TestSubsequentCommitInRepository(t *testing.T) {
-	r, err := PrepareEnvWithCommits()
-	if err != nil {
-		t.Fatalf("could not create test repository: %v", err)
-	}
+	r := prepareEnvWithCommits(t)
 	defer os.RemoveAll(r.Location)
 
 	commit := executeCommitCmd(r, t)

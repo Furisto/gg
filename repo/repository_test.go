@@ -1,18 +1,13 @@
 package repo
 
 import (
-	"github.com/furisto/gog/util"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestIsRepositoryCreatedWithDefaultStorage(t *testing.T) {
-	repoPath, err := util.CreateTemporaryDir()
-	if err != nil {
-		t.Fatal("Could not create temporary directory")
-		return
-	}
+	repoPath := createTemporaryDir(t)
 	defer os.RemoveAll(repoPath)
 
 	InitDefault(repoPath, false)
@@ -22,11 +17,8 @@ func TestIsRepositoryCreatedWithDefaultStorage(t *testing.T) {
 }
 
 func TestIsBareRepositoryCreatedWithDefaultStorage(t *testing.T) {
-	repoPath, err := util.CreateTemporaryDir()
-	if err != nil {
-		t.Fatal("Could not create temporary directory")
-		return
-	}
+	repoPath := createTemporaryDir(t)
+
 	defer os.RemoveAll(repoPath)
 
 	InitDefault(repoPath, true)
@@ -48,8 +40,3 @@ func AssertFsObjectExists(t *testing.T, path string) {
 		t.Errorf("Does not exist %v", path)
 	}
 }
-
-
-
-
-
