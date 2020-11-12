@@ -17,7 +17,7 @@ func TestPrintSizeOfBlob(t *testing.T) {
 
 	options := CatFileOptions{
 		OID:    blob.OID(),
-		Path:   r.Location,
+		Path:   r.Info.WorkingDirectory(),
 		Type:   false,
 		Size:   true,
 		Pretty: false,
@@ -45,7 +45,7 @@ func TestPrintTypeOfBlob(t *testing.T) {
 
 	options := CatFileOptions{
 		OID:    blob.OID(),
-		Path:   r.Location,
+		Path:   r.Info.WorkingDirectory(),
 		Type:   true,
 		Size:   false,
 		Pretty: false,
@@ -67,7 +67,7 @@ func TestPrettyPrintOfBlob(t *testing.T) {
 
 	options := CatFileOptions{
 		OID:    blob.OID(),
-		Path:   r.Location,
+		Path:   r.Info.WorkingDirectory(),
 		Type:   false,
 		Size:   false,
 		Pretty: true,
@@ -89,7 +89,7 @@ func TestPrintSizeOfTree(t *testing.T) {
 
 	options := CatFileOptions{
 		OID:    tree.OID(),
-		Path:   r.Location,
+		Path:   r.Info.WorkingDirectory(),
 		Type:   false,
 		Size:   true,
 		Pretty: false,
@@ -113,7 +113,7 @@ func TestPrintTypeOfTree(t *testing.T) {
 
 	options := CatFileOptions{
 		OID:    tree.OID(),
-		Path:   r.Location,
+		Path:   r.Info.WorkingDirectory(),
 		Type:   true,
 		Size:   false,
 		Pretty: false,
@@ -136,7 +136,7 @@ func TestPrettyPrintOfTree(t *testing.T) {
 
 	options := CatFileOptions{
 		OID:    tree.OID(),
-		Path:   r.Location,
+		Path:   r.Info.WorkingDirectory(),
 		Type:   false,
 		Size:   false,
 		Pretty: true,
@@ -205,9 +205,9 @@ func prepareEnvForTreeTest(t *testing.T) (*repo.Repository, *objects.Tree) {
 	t.Helper()
 
 	ry := createTestRepository(t)
-	populateRepo(t, ry.Location)
+	populateRepo(t, ry.Info.WorkingDirectory())
 
-	tree, err := objects.NewTreeFromDirectory(ry.Location, "")
+	tree, err := objects.NewTreeFromDirectory(ry.Info.WorkingDirectory(), "")
 	if err != nil {
 		t.Fatalf("could not create tree from directory: %v", err)
 	}

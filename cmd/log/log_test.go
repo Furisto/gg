@@ -17,7 +17,7 @@ func TestLogWithNoOptions(t *testing.T) {
 	defer env.Cleanup()
 
 	options := LogCmdOptions{
-		Path: env.Repository.Location,
+		Path: env.Repository.Info.WorkingDirectory(),
 	}
 
 	cmd := NewLogCmd(&env.Output, env.Formatter)
@@ -33,7 +33,7 @@ func TestLogWithSkipOption(t *testing.T) {
 	defer env.Cleanup()
 
 	options := LogCmdOptions{
-		Path:        env.Repository.Location,
+		Path:        env.Repository.Info.WorkingDirectory(),
 		SkipCommits: 5,
 	}
 
@@ -50,7 +50,7 @@ func TestLogWithMaxOption(t *testing.T) {
 	defer env.Cleanup()
 
 	options := LogCmdOptions{
-		Path:       env.Repository.Location,
+		Path:       env.Repository.Info.WorkingDirectory(),
 		MaxCommits: 5,
 	}
 
@@ -72,7 +72,7 @@ func TestLogWithAuthorOption(t *testing.T) {
 	}
 
 	options := LogCmdOptions{
-		Path:   env.Repository.Location,
+		Path:   env.Repository.Info.WorkingDirectory(),
 		Author: re,
 	}
 
@@ -97,7 +97,7 @@ func TestLogWithBeforeOption(t *testing.T) {
 
 	limit := time.Date(2020, 11, 9, 2, 0, 0, 0, time.UTC)
 	options := LogCmdOptions{
-		Path:       env.Repository.Location,
+		Path:       env.Repository.Info.WorkingDirectory(),
 		MaxCommits: 5,
 		Before:     limit,
 	}
@@ -123,7 +123,7 @@ func TestLogWithAfterOption(t *testing.T) {
 
 	limit := time.Date(2020, 11, 9, 2, 0, 0, 0, time.UTC)
 	options := LogCmdOptions{
-		Path:  env.Repository.Location,
+		Path:  env.Repository.Info.WorkingDirectory(),
 		After: limit,
 	}
 
@@ -147,7 +147,7 @@ func TestLogWithCombinedOptions(t *testing.T) {
 	defer env.Cleanup()
 
 	options := LogCmdOptions{
-		Path:        env.Repository.Location,
+		Path:        env.Repository.Info.WorkingDirectory(),
 		SkipCommits: 2,
 		MaxCommits:  2,
 	}
@@ -201,7 +201,7 @@ func prepareEnvForLogTests(t *testing.T) LogTestEnv {
 	output := bytes.Buffer{}
 
 	cleanup := func() {
-		if err := os.RemoveAll(r.Location); err != nil {
+		if err := os.RemoveAll(r.Info.GitDirectory()); err != nil {
 			t.Fatalf("cleanup for test did not execute successfully: %v", err)
 		}
 	}

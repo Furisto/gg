@@ -68,7 +68,7 @@ func prepareEnvWithNoCommmits(t *testing.T) *Repository {
 	t.Helper()
 
 	ry := createTestRepository(t)
-	populateRepo(t, ry.Location)
+	populateRepo(t, ry.Info.WorkingDirectory())
 
 	if err := ry.Config.Set("user", "name", "furisto"); err != nil {
 		t.Fatalf("could not set user name")

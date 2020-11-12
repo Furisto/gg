@@ -19,20 +19,32 @@ var defaultConfigValues = map[string]string{
 	"ignorecase":              "true",
 }
 
+type RepositoryType int8
+
+const (
+	NoRepo RepositoryType = iota
+	BareRepo
+	NonBareRepo
+)
+
 type Repository struct {
-	Location string
-	Storage  storage.ObjectStore
-	Config   config.Config
-	Refs     refs.RefManager
-	Branches Branches
+	gitDir     string
+	workingDir string
+	Storage    storage.ObjectStore
+	Config     config.Config
+	Info       *RepositoryInfo
+	Refs       refs.RefManager
+	Branches   Branches
 }
 
 func Init(path string, bare bool, storage storage.ObjectStore, refs refs.RefManager) (*Repository, error) {
-	var repoPath string
+	var gitDir, workingDir string
 	if bare {
-		repoPath = path
+		gitDir = path
+		workingDir = ""
 	} else {
-		repoPath = filepath.Join(path, ".git")
+		gitDir = filepath.Join(path, ".git")
+		workingDir = path
 	}
 
 	directories := []string{"hooks", "info", "refs/heads", "refs/tags"}
@@ -42,40 +54,45 @@ func Init(path string, bare bool, storage storage.ObjectStore, refs refs.RefMana
 	}
 
 	for _, directory := range directories {
-		if err := os.MkdirAll(filepath.Join(repoPath, directory), os.ModeDir); err != nil {
+		if err := os.MkdirAll(filepath.Join(gitDir, directory), os.ModeDir); err != nil {
 			return nil, err
 		}
 	}
 
 	for k, v := range files {
-		if err := ioutil.WriteFile(filepath.Join(repoPath, k), v, 0644); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(gitDir, k), v, 0644); err != nil {
 			return nil, err
 		}
 	}
 
 	cfg, err := createConfig(
-		filepath.Join(repoPath, "config"), map[string]string{"bare": strconv.FormatBool(bare)})
+		filepath.Join(gitDir, "config"), map[string]string{"bare": strconv.FormatBool(bare)})
 	if err != nil {
 		return nil, err
 	}
 
-	repo := NewRepo(filepath.Dir(repoPath), storage, cfg, refs)
+	repo := NewRepo(workingDir, gitDir, storage, cfg, refs)
 	return repo, nil
 }
 
 func InitDefault(path string, bare bool) (*Repository, error) {
-	repo, err := Init(path, bare, storage.NewFsStore(filepath.Join(path, ".git")), refs.NewGitRefManager(""))
+	gitPath := createGitPaths(path, bare)
+	repo, err := Init(path, bare, storage.NewFsStore(gitPath), refs.NewGitRefManager(gitPath))
 	return repo, err
 }
 
-func NewRepo(path string, store storage.ObjectStore, cfg config.Config, refs refs.RefManager) *Repository {
-	return &Repository{
-		Location: path,
-		Storage:  store,
-		Config:   cfg,
-		Refs:     refs,
-		Branches: NewBranches(refs),
+func NewRepo(workingDir string, gitDir string, store storage.ObjectStore, cfg config.Config, refs refs.RefManager) *Repository {
+	r := &Repository{
+		gitDir:     gitDir,
+		workingDir: workingDir,
+		Storage:    store,
+		Config:     cfg,
+		Refs:       refs,
+		Branches:   NewBranches(refs),
 	}
+
+	r.Info = NewRepositoryInfo(r)
+	return r
 }
 
 func FromExisting(path string) (*Repository, error) {
@@ -83,25 +100,74 @@ func FromExisting(path string) (*Repository, error) {
 		return nil, fmt.Errorf("fatal: not a git repository (or any of the parent directories)")
 	}
 
-	gitPath := filepath.Join(path, ".git")
-	if _, err := os.Stat(gitPath); os.IsNotExist(err) {
+	repoType := isGitRepository(path)
+	if repoType == NoRepo {
 		return FromExisting(filepath.Dir(path))
 	}
 
-	cfg, err := config.CreateDefaultConfigBuilder(filepath.Join(path, ".git", "config"))
+	var workingDir, gitDir string
+	if repoType == BareRepo {
+		workingDir = ""
+		gitDir = path
+	} else {
+		workingDir = path
+		gitDir = filepath.Join(".git")
+	}
+
+	cfg, err := config.CreateDefaultConfigBuilder(filepath.Join(gitDir, "config"))
 	if err != nil {
 		return nil, err
 	}
 
-	refs := refs.NewGitRefManager(gitPath)
+	refs := refs.NewGitRefManager(gitDir)
 
-	return &Repository{
-		Location: path,
-		Storage:  storage.NewFsStore(gitPath),
-		Config:   cfg.Build(),
-		Refs:     refs,
-		Branches: NewBranches(refs),
-	}, nil
+	return NewRepo(workingDir, gitDir, storage.NewFsStore(gitDir), cfg.Build(), refs), nil
+}
+
+func isGitRepository(path string) RepositoryType {
+	candidate := filepath.Join(path, ".git")
+	if _, err := os.Stat(candidate); err == nil {
+		if isGitDirectory(candidate) {
+			return NonBareRepo
+		}
+	}
+
+	if isGitDirectory(path) {
+		return BareRepo
+	}
+
+	return NoRepo
+}
+
+// see https://github.com/git/git/blob/e31aba42fb12bdeb0f850829e008e1e3f43af500/setup.c#L328-L394
+func isGitDirectory(path string) bool {
+	headPath := filepath.Join(path, "HEAD")
+	if _, err := os.Stat(headPath); os.IsNotExist(err) {
+		return false
+	}
+
+	objectsPath := filepath.Join(path, "objects")
+	if _, err := os.Stat(objectsPath); os.IsNotExist(err) {
+		return false
+	}
+
+	refsPath := filepath.Join(path, "refs")
+	if _, err := os.Stat(refsPath); os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
+func createGitPaths(path string, bare bool) string {
+	var gitDir string
+	if bare {
+		gitDir = path
+	} else {
+		gitDir = filepath.Join(path, ".git")
+	}
+
+	return gitDir
 }
 
 func createConfig(configPath string, values map[string]string) (config.Config, error) {
@@ -127,7 +193,7 @@ func createConfig(configPath string, values map[string]string) (config.Config, e
 }
 
 func (ry *Repository) Head() (*refs.Ref, error) {
-	ref, err := ry.Refs.Get("head")
+	ref, err := ry.Refs.Get("HEAD")
 	if err != nil {
 		return nil, err
 	}
@@ -135,13 +201,13 @@ func (ry *Repository) Head() (*refs.Ref, error) {
 	return ref, nil
 }
 
-func (ry *Repository) SetHead(ref *refs.Ref) error {
-	_, err := ry.Refs.Set("head", ref.Name)
+func (ry *Repository) SetHead(ref string) error {
+	_, err := ry.Refs.Set("HEAD", ref)
 	return err
 }
 
 func (ry *Repository) Commit(configure func(builder *objects.CommitBuilder) *objects.CommitBuilder) (*objects.Commit, error) {
-	tree, err := objects.NewTreeFromDirectory(ry.Location, "")
+	tree, err := objects.NewTreeFromDirectory(ry.gitDir, "")
 	if err != nil {
 		return nil, err
 	}

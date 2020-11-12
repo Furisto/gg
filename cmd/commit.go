@@ -54,7 +54,7 @@ func (cmd *CommitCommand) Execute(options CommitOptions) (*objects.Commit, error
 		return nil, err
 	}
 
-	tree, err := objects.NewTreeFromDirectory(r.Location, "")
+	tree, err := objects.NewTreeFromDirectory(r.Info.WorkingDirectory(), "")
 	if err != nil {
 		return nil, err
 	}

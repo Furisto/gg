@@ -202,9 +202,9 @@ type ConfigBuilder struct {
 	configs []Config
 }
 
-func CreateDefaultConfigBuilder(repoPath string) (*ConfigBuilder, error) {
+func CreateDefaultConfigBuilder(repoCfg string) (*ConfigBuilder, error) {
 	cb := ConfigBuilder{}
-	cfgPaths := []string{repoPath, LocateGlobalConfig(), LocateSystemConfig()}
+	cfgPaths := []string{repoCfg, LocateGlobalConfig(), LocateSystemConfig()}
 
 	for _, path := range cfgPaths {
 		if path == "" {

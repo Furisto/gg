@@ -7,10 +7,10 @@ import (
 
 func TestWriteTreeFromWorkingDirNoPrefix(t *testing.T) {
 	r := createTestRepository(t)
-	populateRepo(t, r.Location)
+	populateRepo(t, r.Info.WorkingDirectory())
 
 	options := WriteTreeOptions{
-		Path:                r.Location,
+		Path:                r.Info.WorkingDirectory(),
 		UseWorkingDirectory: true,
 		Prefix:              "",
 	}

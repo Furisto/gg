@@ -12,7 +12,7 @@ const CommitMessage = "Test"
 
 func TestFirstCommitInRepository(t *testing.T) {
 	r := PrepareEnvWithNoCommmits(t)
-	defer os.RemoveAll(r.Location)
+	defer os.RemoveAll(r.Info.WorkingDirectory())
 
 	commit := executeCommitCmd(r, t)
 	checkCommit(commit, t, r)
@@ -20,7 +20,7 @@ func TestFirstCommitInRepository(t *testing.T) {
 
 func TestSubsequentCommitInRepository(t *testing.T) {
 	r := prepareEnvWithCommits(t)
-	defer os.RemoveAll(r.Location)
+	defer os.RemoveAll(r.Info.WorkingDirectory())
 
 	commit := executeCommitCmd(r, t)
 	checkCommit(commit, t, r)
@@ -28,7 +28,7 @@ func TestSubsequentCommitInRepository(t *testing.T) {
 
 func executeCommitCmd(r *repo.Repository, t *testing.T) *objects.Commit {
 	options := CommitOptions{
-		Path:    r.Location,
+		Path:    r.Info.WorkingDirectory(),
 		Message: "Test",
 	}
 
