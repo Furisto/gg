@@ -31,6 +31,7 @@ type Repository struct {
 	gitDir     string
 	workingDir string
 	Storage    storage.ObjectStore
+	Index      *Index
 	Config     config.Config
 	Info       *RepositoryInfo
 	Refs       refs.RefManager
@@ -82,10 +83,13 @@ func InitDefault(path string, bare bool) (*Repository, error) {
 }
 
 func NewRepo(workingDir string, gitDir string, store storage.ObjectStore, cfg config.Config, refs refs.RefManager) *Repository {
+	index := NewIndex(workingDir, gitDir)
+
 	r := &Repository{
 		gitDir:     gitDir,
 		workingDir: workingDir,
 		Storage:    store,
+		Index:      index,
 		Config:     cfg,
 		Refs:       refs,
 		Branches:   NewBranches(refs),
@@ -111,7 +115,7 @@ func FromExisting(path string) (*Repository, error) {
 		gitDir = path
 	} else {
 		workingDir = path
-		gitDir = filepath.Join(".git")
+		gitDir = filepath.Join(path, ".git")
 	}
 
 	cfg, err := config.CreateDefaultConfigBuilder(filepath.Join(gitDir, "config"))
