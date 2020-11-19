@@ -154,6 +154,21 @@ func (ix *Index) EncodeIndex(writer io.Writer) error {
 	hasher := sha1.New()
 	mw := io.MultiWriter(writer, hasher)
 
+	if err := ix.writeHeader(mw); err != nil {
+		return err
+	}
+
+	if err := ix.writeEntries(mw); err != nil {
+		return err
+	}
+	if err := ix.writeFooter(mw, hasher.Sum(nil)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ix *Index) writeHeader(mw io.Writer) error {
 	if _, err := mw.Write(dirCacheMarker); err != nil {
 		return err
 	}
@@ -166,20 +181,21 @@ func (ix *Index) EncodeIndex(writer io.Writer) error {
 		return err
 	}
 
-	sortedEntries := make([]*IndexEntry, len(ix.entries))
-	i := 0
-	for _, v := range ix.entries {
-		sortedEntries[i] = v
-		i++
-	}
-	sort.Sort(indexEntrySorter(sortedEntries))
+	return nil
+}
 
-	for _, entry := range sortedEntries {
-		entry.Encode(mw)
+func (ix *Index) writeEntries(writer io.Writer) error {
+	for _, entry := range ix.Entries() {
+		if err := entry.Encode(writer); err != nil {
+			return err
+		}
 	}
 
-	hash := hasher.Sum(nil)
-	if _, err := mw.Write(hash); err != nil {
+	return nil
+}
+
+func (ix *Index) writeFooter(writer io.Writer, hash []byte) error {
+	if _, err := writer.Write(hash); err != nil {
 		return err
 	}
 
@@ -195,7 +211,9 @@ func (ix *Index) Entries() []*IndexEntry {
 	j := 0
 	for _, v := range ix.entries {
 		entries[j] = v
+		j++
 	}
+	sort.Sort(indexEntrySorter(entries))
 
 	return entries
 }

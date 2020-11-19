@@ -3,7 +3,6 @@ package repo
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -67,43 +66,20 @@ func (ie *IndexEntry) IsRegular() bool {
 }
 
 func (ie *IndexEntry) Encode(writer io.Writer) error {
-	if err := binary.Write(writer, binary.BigEndian, uint32(ie.ChangedTime.Unix())); err != nil {
-		return err
+	fields := []uint32 {
+		uint32(ie.ChangedTime.Unix()),
+		uint32(ie.ChangedTime.UnixNano()),
+		uint32(ie.ModifiedTime.Unix()),
+		uint32(ie.ModifiedTime.UnixNano()),
+		ie.DeviceId,
+		ie.Inode,
+		uint32(ie.Mode),
+		ie.UID,
+		ie.GID,
+		ie.FileSize,
 	}
 
-	if err := binary.Write(writer, binary.BigEndian, uint32(ie.ChangedTime.UnixNano())); err != nil {
-		return err
-	}
-
-	if err := binary.Write(writer, binary.BigEndian, uint32(ie.ModifiedTime.Unix())); err != nil {
-		return err
-	}
-
-	if err := binary.Write(writer, binary.BigEndian, uint32(ie.ModifiedTime.UnixNano())); err != nil {
-		return err
-	}
-
-	if err := binary.Write(writer, binary.BigEndian, ie.DeviceId); err != nil {
-		return err
-	}
-
-	if err := binary.Write(writer, binary.BigEndian, ie.Inode); err != nil {
-		return err
-	}
-
-	if err := binary.Write(writer, binary.BigEndian, ie.Mode); err != nil {
-		return err
-	}
-
-	if err := binary.Write(writer, binary.BigEndian, ie.UID); err != nil {
-		return err
-	}
-
-	if err := binary.Write(writer, binary.BigEndian, ie.GID); err != nil {
-		return err
-	}
-
-	if err := binary.Write(writer, binary.BigEndian, ie.FileSize); err != nil {
+	if err := binary.Write(writer, binary.BigEndian, fields); err != nil {
 		return err
 	}
 
@@ -187,14 +163,6 @@ const (
 	Ours              = 2
 	Theirs            = 3
 )
-
-func NewStageType(t uint8) (StageType, error) {
-	if t > 3 {
-		return 255, errors.New("invalid stage tpye")
-	}
-
-	return StageType(t), nil
-}
 
 type Flags uint16
 
