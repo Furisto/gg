@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/furisto/gog/plumbing/objects"
 	"github.com/furisto/gog/repo"
 	"github.com/spf13/cobra"
@@ -13,11 +14,12 @@ import (
 func SetupAddCmd(context CommandContext) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
-		Short: "",
+		Short: "Add file contents to the index",
 	}
 
 	options := AddCmdOptions{}
-	cmd.Flags().BoolVarP(&options.DryRun, "dry-run", "n", false, "")
+	cmd.Flags().BoolVarP(&options.DryRun, "dry-run", "n", false, "dry run")
+	cmd.Flags().BoolVarP(&options.DryRun, "verbose", "v", false, "be verbose")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		handler := NewAddCmd(context.Logger)
@@ -30,6 +32,7 @@ func SetupAddCmd(context CommandContext) *cobra.Command {
 type AddCmdOptions struct {
 	Path     string
 	DryRun   bool
+	Verbose  bool
 	Patterns []string
 }
 
@@ -64,7 +67,7 @@ func (cmd *AddCommand) Execute(options AddCmdOptions) error {
 				continue
 			}
 
-			entry := ry.Index.Find(match)
+			entry, err := ry.Index.Find(match)
 			if entry != nil {
 				stat, err := os.Stat(match)
 				if err != nil {
@@ -81,8 +84,14 @@ func (cmd *AddCommand) Execute(options AddCmdOptions) error {
 				return err
 			}
 
-			if err := ry.Index.Set(blob.OID(), match); err != nil {
-				return err
+			if !options.DryRun {
+				if err := ry.Index.Set(blob.OID(), match); err != nil {
+					return err
+				}
+			}
+
+			if options.Verbose {
+				fmt.Fprintf(cmd.writer, "add %v", match)
 			}
 		}
 	}
