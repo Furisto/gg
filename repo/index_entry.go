@@ -3,6 +3,7 @@ package repo
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"github.com/furisto/gog/util"
 	"io"
 	"os"
 	"path/filepath"
@@ -49,6 +50,58 @@ func (ie *IndexEntry) Match(stat os.FileInfo) bool {
 	return true
 }
 
+func (ie *IndexEntry) Equals(other *IndexEntry) bool {
+	if ie.OID != other.OID {
+		return false
+	}
+
+	if ie.Path != other.Path {
+		return false
+	}
+
+	if !ie.ChangedTime.Equal(other.ChangedTime) {
+		return false
+	}
+
+	if !ie.ModifiedTime.Equal(other.ModifiedTime) {
+		return false
+	}
+
+	if ie.FileSize != other.FileSize {
+		return false
+	}
+
+	if ie.DeviceId != other.DeviceId {
+		return false
+	}
+
+	if ie.Inode != other.Inode {
+		return false
+	}
+
+	if ie.Mode != other.Mode {
+		return false
+	}
+
+	if ie.UID != other.UID {
+		return false
+	}
+
+	if ie.GID != other.GID {
+		return false
+	}
+
+	if ie.Flags != other.Flags {
+		return false
+	}
+
+	if ie.ExtendedFlags != other.ExtendedFlags {
+		return false
+	}
+
+	return true
+}
+
 func (ie *IndexEntry) IsOurs() bool {
 	return ie.Flags.StageType() == Ours
 }
@@ -66,20 +119,20 @@ func (ie *IndexEntry) IsRegular() bool {
 }
 
 func (ie *IndexEntry) Encode(writer io.Writer) error {
-	fields := []uint32 {
-		uint32(ie.ChangedTime.Unix()),
-		uint32(ie.ChangedTime.UnixNano()),
-		uint32(ie.ModifiedTime.Unix()),
-		uint32(ie.ModifiedTime.UnixNano()),
+	fields := []interface{}{
+		ie.ChangedTime.Unix(),
+		ie.ChangedTime.UnixNano(),
+		ie.ModifiedTime.Unix(),
+		ie.ModifiedTime.UnixNano(),
 		ie.DeviceId,
 		ie.Inode,
-		uint32(ie.Mode),
+		ie.Mode,
 		ie.UID,
 		ie.GID,
 		ie.FileSize,
 	}
 
-	if err := binary.Write(writer, binary.BigEndian, fields); err != nil {
+	if err := util.WriteMultiple(writer, binary.BigEndian, fields); err != nil {
 		return err
 	}
 
@@ -104,7 +157,7 @@ func (ie *IndexEntry) Encode(writer io.Writer) error {
 		return err
 	}
 
-	paddingLength := (62 + len(ie.Path) + 1) % 8
+	paddingLength := (indexEntryOffset + len(ie.Path) + 1) % 8
 	if paddingLength > 0 {
 		padding := make([]byte, 8-paddingLength)
 		if _, err := writer.Write(padding); err != nil {

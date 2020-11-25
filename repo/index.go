@@ -5,19 +5,24 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"github.com/furisto/gog/util"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 )
 
 var dirCacheMarker = []byte("DIRC")
 
+const indexEntryOffset = 62
+
 var (
-	ErrEntryDoesNotExist = errors.New("index entry does not exist")
-	ErrCorruptIndex      = errors.New("index file is corrupt")
+	ErrEntryDoesNotExist       = errors.New("index entry does not exist")
+	ErrCorruptIndex            = errors.New("index file is corrupt")
+	ErrUnsupportedIndexVersion = errors.New("index version not supported")
 )
 
 type Index struct {
@@ -46,108 +51,134 @@ func DecodeIndex(path string) (*Index, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer indexFile.Close()
-
-	bufReader := bufio.NewReader(indexFile)
-
-	var dirCache []byte
-	if _, err := io.ReadFull(bufReader, dirCache); err != nil {
-		return nil, err
-	}
-
-	if !bytes.Equal(dirCache, dirCacheMarker) {
-		return nil, ErrCorruptIndex
-	}
+	defer util.CloseFile(indexFile, err)
 
 	hasher := sha1.New()
-	hasher.Write(dirCache)
+	reader := io.TeeReader(bufio.NewReader(indexFile), hasher)
 
-	var version uint32
-	if err := binary.Read(bufReader, binary.BigEndian, &version); err != nil {
+	version, entryLength, err := readHeader(reader)
+	if err != nil {
 		return nil, err
 	}
 
-	var entryLength uint32
-	if err := binary.Read(bufReader, binary.BigEndian, &entryLength); err != nil {
+	entries, err := readEntries(reader, entryLength)
+	if err != nil {
 		return nil, err
 	}
 
-	const offset int8 = 62
-	var entries map[string]*IndexEntry
-
-	for i := uint32(0); i < entryLength; i++ {
-		var entry IndexEntry
-
-		entry.ChangedTime, err = util.ReadTime(bufReader)
-		if err != nil {
-			return nil, err
-		}
-
-		entry.ModifiedTime, err = util.ReadTime(bufReader)
-		if err != nil {
-			return nil, err
-		}
-
-		entry.DeviceId, err = util.ReadUint32(bufReader)
-		if err != nil {
-			return nil, err
-		}
-
-		entry.Inode, err = util.ReadUint32(bufReader)
-		if err != nil {
-			return nil, err
-		}
-
-		entry.Mode, err = util.ReadFileMode(bufReader)
-		if err != nil {
-			return nil, err
-		}
-
-		entry.UID, err = util.ReadUint32(bufReader)
-		if err != nil {
-			return nil, err
-		}
-
-		entry.GID, err = util.ReadUint32(bufReader)
-		if err != nil {
-			return nil, err
-		}
-
-		entry.FileSize, err = util.ReadUint32(bufReader)
-		if err != nil {
-			return nil, err
-		}
-
-		entry.OID, err = util.ReadString(bufReader, 20)
-		if err != nil {
-			return nil, err
-		}
-
-		flagValue, err := util.ReadUint16(bufReader)
-		if err != nil {
-			return nil, err
-		}
-		entry.Flags = Flags(flagValue)
-
-		entry.Path, err = bufReader.ReadString(byte(0))
-		if err != nil {
-			return nil, err
-		}
-		entry.Path = entry.Path[:len(entry.Path)-1]
-
-		paddingLength := 62 + len(entry.Path) + 1%8
-		if paddingLength > 0 {
-			throwaway := make([]byte, 8-paddingLength)
-			io.ReadFull(bufReader, throwaway)
-		}
-
-		entries[entry.Path] = &entry
+	if err := verifyFooter(reader, hasher.Sum(nil)); err != nil {
+		return nil, err
 	}
 
 	return &Index{
 		version: version,
 		entries: entries,
 	}, nil
+}
+
+func readHeader(reader io.Reader) (version uint32, entryLength uint32, err error) {
+	dirCache := make([]byte, 4)
+	if _, err := io.ReadFull(reader, dirCache); err != nil {
+		return 0, 0, err
+	}
+
+	if !bytes.Equal(dirCache, dirCacheMarker) {
+		return 0, 0, ErrCorruptIndex
+	}
+
+	if err := binary.Read(reader, binary.BigEndian, &version); err != nil {
+		return 0, 0, err
+	}
+
+	if version != 2 {
+		return 0, 0, ErrUnsupportedIndexVersion
+	}
+
+	if err := binary.Read(reader, binary.BigEndian, &entryLength); err != nil {
+		return 0, 0, err
+	}
+
+	return version, entryLength, nil
+}
+
+func readEntries(reader io.Reader, entryLength uint32) (map[string]*IndexEntry, error) {
+	entries := make(map[string]*IndexEntry)
+
+	for i := uint32(0); i < entryLength; i++ {
+		var entry IndexEntry
+		var csec, cnano, msec, mnano uint32
+
+		fields := []interface{}{
+			&csec,
+			&cnano,
+			&msec,
+			&mnano,
+			&entry.DeviceId,
+			&entry.Inode,
+			&entry.Mode,
+			&entry.UID,
+			&entry.GID,
+			&entry.FileSize,
+		}
+
+		if err := util.ReadMultiple(reader, fields...); err != nil {
+			return nil, err
+		}
+
+		entry.ChangedTime = time.Unix(int64(csec), int64(cnano))
+		entry.ModifiedTime = time.Unix(int64(msec), int64(mnano))
+
+		oidBytes := make([]byte, 20)
+		if _, err := io.ReadFull(reader, oidBytes); err != nil {
+			return nil, err
+		}
+
+		entry.OID = hex.EncodeToString(oidBytes)
+
+		flagValue, err := util.ReadUint16(reader)
+		if err != nil {
+			return nil, err
+		}
+		entry.Flags = Flags(flagValue)
+
+		pathBytes := make([]byte, entry.Flags.Length()+1)
+		if _, err := io.ReadFull(reader, pathBytes); err != nil {
+			return nil, err
+		}
+		entry.Path = string(pathBytes[:len(pathBytes)-1])
+		entries[entry.Path] = &entry
+
+		if err = discardPadding(reader, &entry); err != nil {
+			return nil, err
+		}
+	}
+
+	return entries, nil
+}
+
+func discardPadding(reader io.Reader, entry *IndexEntry) error {
+	paddingInverse := (indexEntryOffset + entry.Flags.Length() + 1) % 8
+	if paddingInverse > 0 {
+		discard := make([]byte, 8-paddingInverse)
+		if _, err := io.ReadFull(reader, discard); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func verifyFooter(reader io.Reader, hash []byte) error {
+	readHash := make([]byte, 20)
+	if _, err := io.ReadFull(reader, readHash); err != nil {
+		return err
+	}
+
+	if !bytes.Equal(readHash, hash) {
+		return ErrCorruptIndex
+	}
+
+	return nil
 }
 
 func (ix *Index) EncodeIndex(writer io.Writer) error {
@@ -231,20 +262,30 @@ func (ix *Index) Delete(path string) {
 	delete(ix.entries, path)
 }
 
-func (ix *Index) Find(path string) *IndexEntry {
+func (ix *Index) Find(path string) (*IndexEntry, error) {
 	entry, ok := ix.entries[path]
 	if !ok {
-		return nil
+		return nil, ErrEntryDoesNotExist
 	}
 
-	return entry
+	return entry, nil
 }
 
-func (ix *Index) Flush() error {
+func (ix *Index) Flush() (err error) {
 	indexFile, err := os.Create(filepath.Join(ix.gitDir, "index"))
 	if err != nil {
 		return err
 	}
-	defer indexFile.Close()
-	return ix.EncodeIndex(indexFile)
+	defer func() {
+		cerr := indexFile.Close()
+		if err == nil {
+			err = cerr
+		}
+	}()
+
+	if err := ix.EncodeIndex(indexFile); err != nil {
+		return err
+	}
+
+	return indexFile.Sync()
 }

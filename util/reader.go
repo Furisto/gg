@@ -7,6 +7,16 @@ import (
 	"time"
 )
 
+func ReadMultiple(reader io.Reader, items ...interface{}) error {
+	for _, item := range items {
+		if err := binary.Read(reader, binary.BigEndian, item); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func ReadUint16(reader io.Reader) (uint16, error) {
 	var number uint16
 	if err := binary.Read(reader, binary.BigEndian, &number); err != nil {
