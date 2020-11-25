@@ -38,5 +38,8 @@ func setupCommands() *cobra.Command {
 	log := log.SetupLogCmd(cmdContext)
 	rootCmd.AddCommand(log)
 
+	add := cmd.SetupAddCmd(cmdContext)
+	rootCmd.AddCommand(add)
+
 	return rootCmd
 }
