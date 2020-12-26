@@ -2,12 +2,15 @@ package repo
 
 import (
 	"fmt"
+	"github.com/furisto/gog/plumbing/objects"
 	"testing"
 	"time"
 )
 
+const indexPath = "./testdata/index"
+
 func TestDecodeIndex(t *testing.T) {
-	ix, err := DecodeIndex("./testdata/index")
+	ix, err := DecodeIndex(indexPath)
 	if err != nil {
 		t.Errorf("error occured during decoding of index: %v", err)
 		return
@@ -87,5 +90,58 @@ func TestDecodeIndex(t *testing.T) {
 		if !expct.Equals(entries[i]) {
 			t.Errorf("expected %+v but got %+v", expct, entries[i])
 		}
+	}
+}
+
+func TestIndexToTree(t *testing.T) {
+	ix, err := DecodeIndex(indexPath)
+	if err != nil {
+		t.Fatalf("could not decode index at %v: %v", indexPath, err)
+	}
+
+	converter := NewIndexToTreeConverter(ix)
+	tree, err := converter.Convert()
+	if err != nil {
+		t.Errorf("could not convert index to tree: %v", err)
+		return
+	}
+
+	expected := []objects.TreeEntry{
+		{
+			Name: "0",
+			OID:  "9aacd487c128e9d564997629c0c4257f44183aaf",
+			Mode: 0o040000,
+		},
+		{
+			Name: "1",
+			OID:  "44f70e4f280f5641a30d69706500490032ccce59",
+			Mode: 0o040000,
+		},
+	}
+
+	actual := tree.Entries()
+	if len(expected) != len(actual) {
+		t.Errorf("number of entries does")
+		return
+	}
+
+	// todo: check sub trees
+	for i := range actual {
+		areTreeEntriesEqual(t, expected[i], actual[i])
+	}
+}
+
+func areTreeEntriesEqual(t *testing.T, expected objects.TreeEntry, actual objects.TreeEntry) {
+	t.Helper()
+	if expected.OID != actual.OID {
+		t.Errorf("object IDs of tree entries do not match: %v vs %v", expected.OID, actual.OID)
+	}
+
+	if expected.Name != actual.Name {
+		t.Errorf("names of tree entries do not match: %v vs %v", expected.Name, actual.Name)
+	}
+
+	if expected.Mode != actual.Mode {
+		t.Errorf("file modes of trees do not match")
 	}
 }

@@ -7,11 +7,13 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"github.com/furisto/gog/plumbing/objects"
 	"github.com/furisto/gog/util"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -30,7 +32,6 @@ type Index struct {
 	gitDir     string
 	version    uint32
 	entries    map[string]*IndexEntry
-	store      io.ReadWriteCloser
 }
 
 func NewIndex(workingDir, gitDir string) *Index {
@@ -288,4 +289,50 @@ func (ix *Index) Flush() (err error) {
 	}
 
 	return indexFile.Sync()
+}
+
+type IndexToTreeConverter struct {
+	entries map[string]*objects.TreeBuilder
+	index   *Index
+}
+
+func NewIndexToTreeConverter(index *Index) *IndexToTreeConverter {
+	return &IndexToTreeConverter{
+		entries: make(map[string]*objects.TreeBuilder),
+		index:   index,
+	}
+}
+
+func (ic *IndexToTreeConverter) Convert() (*objects.Tree, error) {
+	rootBuilder := objects.NewTreeBuilder()
+	ic.entries[""] = rootBuilder
+
+	for _, indexEntry := range ic.index.Entries() {
+		parts := strings.Split(indexEntry.Path, "/")
+		combinedPath := ""
+		for i, part := range parts {
+			parentPath := combinedPath
+			if i == 0 {
+				combinedPath = part
+			} else {
+				combinedPath = combinedPath + "/" + part
+			}
+			ic.convert(indexEntry, parentPath, combinedPath)
+		}
+	}
+
+	tree := rootBuilder.Build()
+	return tree, nil
+}
+
+func (ic *IndexToTreeConverter) convert(indexEntry *IndexEntry, parentPath, combinedPath string) {
+	if indexEntry.Path == combinedPath {
+		ic.entries[parentPath].AddBlob(indexEntry.OID, filepath.Base(combinedPath), 0o100644)
+	} else {
+		if _, ok := ic.entries[combinedPath]; !ok {
+			ic.entries[combinedPath] = objects.NewTreeBuilder()
+		}
+
+		ic.entries[parentPath].AddSubTree(filepath.Base(combinedPath), ic.entries[combinedPath])
+	}
 }

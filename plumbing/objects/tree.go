@@ -27,6 +27,18 @@ type Tree struct {
 	entries []TreeEntry
 }
 
+func NewTree(entries []TreeEntry) *Tree {
+	tree := &Tree{
+		entries: entries,
+	}
+
+	content := tree.getContent()
+	tree.size = uint32(len(content))
+
+	tree.oid = hasher.Hash(tree.getHeader(), content)
+	return tree
+}
+
 func NewTreeFromDirectory(path string, prefix string) (*Tree, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, err
@@ -38,8 +50,6 @@ func NewTreeFromDirectory(path string, prefix string) (*Tree, error) {
 		return nil, err
 	}
 
-	var blobs []TreeEntry
-	var trees []TreeEntry
 	for _, f := range fileEntries {
 		if f.Name() == ".git" {
 			continue
@@ -54,7 +64,7 @@ func NewTreeFromDirectory(path string, prefix string) (*Tree, error) {
 				return nil, err
 			}
 
-			trees = append(trees, TreeEntry{Mode: f.Mode(), Name: f.Name(), Object: tree})
+			tree.entries = append(tree.entries, TreeEntry{Mode: f.Mode(), Name: f.Name(), Object: tree})
 		} else {
 			if !strings.HasPrefix(f.Name(), prefix) {
 				continue
@@ -64,11 +74,9 @@ func NewTreeFromDirectory(path string, prefix string) (*Tree, error) {
 				return nil, err
 			}
 
-			blobs = append(blobs, TreeEntry{Mode: f.Mode(), Name: f.Name(), Object: blob})
+			tree.entries = append(tree.entries, TreeEntry{Mode: f.Mode(), Name: f.Name(), Object: blob})
 		}
 	}
-	tree.Blobs = blobs
-	tree.Trees = trees
 
 	content := tree.getContent()
 	tree.size = uint32(len(content))
@@ -162,7 +170,6 @@ func (t *Tree) Type() string {
 }
 
 func (t *Tree) Entries() []TreeEntry {
-	//all := append(t.Blobs, t.Trees...)
 	sort.Sort(treeEntrySorter(t.entries))
 
 	return t.entries
@@ -192,7 +199,7 @@ func (t *Tree) getHeader() []byte {
 }
 
 func (t *Tree) getContent() []byte {
-	all := append(t.Blobs, t.Trees...)
+	all := t.entries
 	sort.Sort(treeEntrySorter(all))
 
 	var b []byte
@@ -212,24 +219,14 @@ type TreeEntry struct {
 
 func (t *TreeEntry) Bytes() []byte {
 	var b []byte
-	oid, _ := hex.DecodeString(t.Object.OID())
+	oid, _ := hex.DecodeString(t.OID)
 
 	b = append(t.getHeader(), oid...)
 	return b
 }
 
 func (t *TreeEntry) getHeader() []byte {
-	_, ok := t.Object.(*Blob)
-	if ok {
-		return []byte(fmt.Sprintf("%v %v\x00", 100644, t.Name))
-	}
-
-	_, ok = t.Object.(*Tree)
-	if ok {
-		return []byte(fmt.Sprintf("%v %v\x00", 40000, t.Name))
-	}
-
-	panic("Invalid object type")
+	return []byte(fmt.Sprintf("%o %v\x00", t.Mode, t.Name))
 }
 
 type treeEntrySorter []TreeEntry
@@ -252,4 +249,44 @@ func (*treeEntrySorter) adaptName(entry TreeEntry) string {
 	}
 
 	return entry.Name
+}
+
+type TreeBuilder struct {
+	entries      []TreeEntry
+	treeBuilders map[string]*TreeBuilder
+}
+
+func NewTreeBuilder() *TreeBuilder {
+	return &TreeBuilder{
+		treeBuilders: make(map[string]*TreeBuilder),
+	}
+}
+
+func (tb *TreeBuilder) AddBlob(oid, name string, mode os.FileMode) {
+	treeEntry := TreeEntry{
+		OID:  oid,
+		Name: name,
+		Mode: mode,
+	}
+
+	tb.entries = append(tb.entries, treeEntry)
+}
+
+func (tb *TreeBuilder) AddSubTree(name string, treeBuilder *TreeBuilder) {
+	tb.treeBuilders[name] = treeBuilder
+}
+
+func (tb *TreeBuilder) Build() *Tree {
+	for name, treeBuilder := range tb.treeBuilders {
+		tree := treeBuilder.Build()
+		tb.entries = append(tb.entries, TreeEntry{
+			OID:    tree.oid,
+			Name:   name,
+			Mode:   0o040000,
+			Object: tree,
+		})
+	}
+
+	sort.Sort(treeEntrySorter(tb.entries))
+	return NewTree(tb.entries)
 }
