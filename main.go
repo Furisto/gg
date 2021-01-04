@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/furisto/gog/cmd"
 	"github.com/furisto/gog/cmd/log"
 	"github.com/spf13/cobra"
@@ -10,6 +11,7 @@ import (
 func main() {
 	rootCmd := setupCommands()
 	if err := rootCmd.Execute(); err != nil {
+		fmt.Printf("fatal: %v", err)
 		os.Exit(1)
 	}
 }
@@ -40,6 +42,9 @@ func setupCommands() *cobra.Command {
 
 	add := cmd.SetupAddCmd(cmdContext)
 	rootCmd.AddCommand(add)
+
+	branch := cmd.SetupBranchCmd(cmdContext)
+	rootCmd.AddCommand(branch)
 
 	return rootCmd
 }
