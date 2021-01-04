@@ -37,7 +37,7 @@ func (ryi *RepositoryInfo) IsBare() (bool, error) {
 }
 
 func (ryi *RepositoryInfo) IsHeadDetached() (bool, error) {
-	head, err := ryi.repo.Head()
+	head, err := ryi.repo.Head(false)
 	if err != nil {
 		return false, err
 	}
@@ -46,7 +46,7 @@ func (ryi *RepositoryInfo) IsHeadDetached() (bool, error) {
 }
 
 func (ryi *RepositoryInfo) IsHeadUnborn() (bool, error) {
-	head, err := ryi.repo.Head()
+	head, err := ryi.repo.Head(false)
 	if err != nil {
 		return false, err
 	}

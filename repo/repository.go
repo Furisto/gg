@@ -8,6 +8,7 @@ import (
 	"github.com/furisto/gog/storage"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 )
@@ -123,9 +124,9 @@ func FromExisting(path string) (*Repository, error) {
 		return nil, err
 	}
 
-	refs := refs.NewGitRefManager(gitDir)
+	refMgr := refs.NewGitRefManager(gitDir)
 
-	return NewRepo(workingDir, gitDir, storage.NewFsStore(gitDir), cfg.Build(), refs), nil
+	return NewRepo(workingDir, gitDir, storage.NewFsStore(gitDir), cfg.Build(), refMgr), nil
 }
 
 func isGitRepository(path string) RepositoryType {
@@ -163,12 +164,12 @@ func isGitDirectory(path string) bool {
 	return true
 }
 
-func createGitPaths(path string, bare bool) string {
+func createGitPaths(sourcePath string, bare bool) string {
 	var gitDir string
 	if bare {
-		gitDir = path
+		gitDir = sourcePath
 	} else {
-		gitDir = filepath.Join(path, ".git")
+		gitDir = path.Join(sourcePath, ".git")
 	}
 
 	return gitDir
@@ -196,10 +197,14 @@ func createConfig(configPath string, values map[string]string) (config.Config, e
 	return cfg, nil
 }
 
-func (ry *Repository) Head() (*refs.Ref, error) {
+func (ry *Repository) Head(resolve bool) (*refs.Ref, error) {
 	ref, err := ry.Refs.Get("HEAD")
 	if err != nil {
 		return nil, err
+	}
+
+	if resolve {
+		return ry.Refs.Resolve(ref)
 	}
 
 	return ref, nil
@@ -219,7 +224,7 @@ func (ry *Repository) Commit(configure func(builder *objects.CommitBuilder) *obj
 		return nil, err
 	}
 
-	headRef, err := ry.Head()
+	headRef, err := ry.Head(false)
 	if err != nil {
 		return nil, err
 	}

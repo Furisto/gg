@@ -62,7 +62,7 @@ func (cmd *CommitCommand) Execute(options CommitOptions) (*objects.Commit, error
 		return nil, err
 	}
 
-	headRef, err := r.Head()
+	headRef, err := r.Head(false)
 	if err != nil {
 		return nil, err
 	}
