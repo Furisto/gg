@@ -18,7 +18,7 @@ type Branches struct {
 
 func NewBranches(refs refs.RefManager) Branches {
 	return Branches{
-		prefix: "/refs/heads",
+		prefix: "/refs/heads/",
 		refs:   refs,
 	}
 }
@@ -28,7 +28,7 @@ func (b *Branches) Create(name string, value string) (*refs.Ref, error) {
 		return nil, ErrEmptyBranchNameNotAllowed
 	}
 
-	return b.refs.Set(filepath.Join(b.prefix, name), value)
+	return b.refs.Set(b.prefix+name, value)
 }
 
 func (b *Branches) Get(name string) (*refs.Ref, error) {
@@ -50,6 +50,39 @@ func (b *Branches) Update(name string, value *refs.Ref) error {
 
 	_, err := b.refs.Set(filepath.Join(b.prefix, name), value.Name)
 	return err
+}
+
+func (b *Branches) Rename(sourceBranch, targetBranch string) error {
+	if err := b.Copy(sourceBranch, targetBranch); err != nil {
+		return err
+	}
+
+	if err := b.refs.Delete(b.prefix + sourceBranch); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *Branches) Copy(sourceBranch, targetBranch string) error {
+	if sourceBranch == "" || targetBranch == "" {
+		return ErrEmptyBranchNameNotAllowed
+	}
+
+	sourceRef, err := b.refs.Get(b.prefix + sourceBranch)
+	if err != nil {
+		return err
+	}
+
+	if _, err := b.refs.Get(b.prefix + targetBranch); err == nil {
+		return ErrBranchAlreadyExists
+	}
+
+	if _, err := b.refs.Set(b.prefix+targetBranch, sourceRef.RefValue); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *Branches) Delete(name string) error {

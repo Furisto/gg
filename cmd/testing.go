@@ -8,6 +8,7 @@ import (
 	"github.com/furisto/gog/storage"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -85,11 +86,11 @@ func createTestRepository(t *testing.T) *repo.Repository {
 	t.Helper()
 
 	dir := createTemporaryDir(t)
-	gitDir := filepath.Join(dir, ".git")
+	gitDir := path.Join(dir, ".git")
 
 	store := storage.NewFsStore(gitDir)
-	refs := refs.NewGitRefManager(gitDir)
-	r, err := repo.Init(dir, false, store, refs)
+	refMgr := refs.NewGitRefManager(gitDir)
+	r, err := repo.Init(dir, false, store, refMgr)
 	if err != nil {
 		t.Fatalf("could not initialize test repository: %v", err)
 	}
