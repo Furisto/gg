@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -104,10 +105,10 @@ func NewGitRefManager(gitDir string) *GitRefManager {
 		gitDir: gitDir,
 		refDirs: []string{
 			gitDir,
-			filepath.Join(gitDir, RefPattern),
-			filepath.Join(gitDir, TagPattern),
-			filepath.Join(gitDir, BranchPattern),
-			filepath.Join(gitDir, RemotePattern),
+			path.Join(gitDir, RefPattern),
+			path.Join(gitDir, TagPattern),
+			path.Join(gitDir, BranchPattern),
+			path.Join(gitDir, RemotePattern),
 		},
 	}
 }
@@ -134,21 +135,22 @@ func (grm *GitRefManager) Get(name string) (*Ref, error) {
 	return DecodeRefFromFile(name, refPath)
 }
 
-func (grm *GitRefManager) List(prefix string) []*Ref {
+func (grm *GitRefManager) List(suffix string) []*Ref {
 	var refs []*Ref
+	suffix = strings.TrimSuffix(suffix, "/")
 
 	for _, dir := range grm.refDirs {
-		if !strings.HasPrefix(dir, prefix) {
+		if !strings.HasSuffix(dir, suffix) {
 			continue
 		}
 
-		files, err := ioutil.ReadDir(filepath.Join(grm.gitDir, dir))
+		files, err := ioutil.ReadDir(dir)
 		if err != nil {
 			continue
 		}
 
 		for _, f := range files {
-			ref, err := DecodeRefFromFile(filepath.Base(f.Name()), f.Name())
+			ref, err := DecodeRefFromFile(path.Join(suffix, f.Name()), path.Join(dir, f.Name()))
 			if err != nil {
 				continue
 			}
