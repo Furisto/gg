@@ -59,12 +59,12 @@ func NewTreeFromDirectory(path string, prefix string) (*Tree, error) {
 			if !strings.HasPrefix(f.Name(), prefix) {
 				continue
 			}
-			tree, err := NewTreeFromDirectory(filepath.Join(path, f.Name()), "")
+			subTree, err := NewTreeFromDirectory(filepath.Join(path, f.Name()), "")
 			if err != nil {
 				return nil, err
 			}
 
-			tree.entries = append(tree.entries, TreeEntry{Mode: f.Mode(), Name: f.Name(), Object: tree})
+			tree.entries = append(tree.entries, TreeEntry{Mode: f.Mode(), Name: f.Name(), OID: subTree.OID(), Object: subTree})
 		} else {
 			if !strings.HasPrefix(f.Name(), prefix) {
 				continue
@@ -74,7 +74,7 @@ func NewTreeFromDirectory(path string, prefix string) (*Tree, error) {
 				return nil, err
 			}
 
-			tree.entries = append(tree.entries, TreeEntry{Mode: f.Mode(), Name: f.Name(), Object: blob})
+			tree.entries = append(tree.entries, TreeEntry{Mode: f.Mode(), Name: f.Name(), OID: blob.OID(), Object: blob})
 		}
 	}
 

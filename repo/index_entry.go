@@ -132,7 +132,7 @@ func (ie *IndexEntry) Encode(writer io.Writer) error {
 		ie.FileSize,
 	}
 
-	if err := util.WriteMultiple(writer, binary.BigEndian, fields); err != nil {
+	if err := util.WriteMultiple(writer, fields); err != nil {
 		return err
 	}
 

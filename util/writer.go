@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-func WriteMultiple(writer io.Writer, items ...interface{}) error {
+func WriteMultiple(writer io.Writer, items []interface{}) error {
 	for _, item := range items {
 		if err := binary.Write(writer, binary.BigEndian, item); err != nil {
 			return err
