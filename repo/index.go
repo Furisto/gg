@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/furisto/gog/plumbing/objects"
+	"github.com/furisto/gog/storage"
 	"github.com/furisto/gog/util"
 	"io"
 	"os"
@@ -32,14 +33,16 @@ type Index struct {
 	gitDir     string
 	version    uint32
 	entries    map[string]*IndexEntry
+	store      storage.ObjectStore
 }
 
-func NewIndex(workingDir, gitDir string) *Index {
+func NewIndex(workingDir, gitDir string, store storage.ObjectStore) *Index {
 	return &Index{
 		workingDir: workingDir,
 		gitDir:     gitDir,
 		version:    2,
 		entries:    make(map[string]*IndexEntry),
+		store:      store,
 	}
 }
 
@@ -250,8 +253,30 @@ func (ix *Index) Entries() []*IndexEntry {
 	return entries
 }
 
-func (ix *Index) Set(oid, path string) error {
-	entry, err := newIndexEntryFromFile(oid, path, ix.workingDir)
+func (ix *Index) Set(path string) error {
+	entry, err := ix.Find(path)
+	if entry != nil {
+		stat, err := os.Stat(path)
+		if err != nil {
+			return err
+		}
+
+		if entry.Match(stat) {
+			return nil
+		}
+	}
+
+	blob, err := objects.NewBlobFromFile(path)
+	if err != nil {
+		return err
+	}
+
+	err = blob.Save(ix.store)
+	if err != nil {
+		return err
+	}
+
+	entry, err = newIndexEntryFromFile(blob.OID(), path, ix.workingDir)
 	if err != nil {
 		return err
 	}

@@ -84,7 +84,7 @@ func InitDefault(path string, bare bool) (*Repository, error) {
 }
 
 func NewRepo(workingDir string, gitDir string, store storage.ObjectStore, cfg config.Config, refs refs.RefManager) *Repository {
-	index := NewIndex(workingDir, gitDir)
+	index := NewIndex(workingDir, gitDir, store)
 
 	r := &Repository{
 		gitDir:     gitDir,

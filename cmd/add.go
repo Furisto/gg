@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/furisto/gog/plumbing/objects"
 	"github.com/furisto/gog/repo"
 	"github.com/spf13/cobra"
 	"io"
@@ -67,25 +66,8 @@ func (cmd *AddCommand) Execute(options AddCmdOptions) error {
 				continue
 			}
 
-			entry, err := ry.Index.Find(match)
-			if entry != nil {
-				stat, err := os.Stat(match)
-				if err != nil {
-					return err
-				}
-
-				if entry.Match(stat) {
-					continue
-				}
-			}
-
-			blob, err := objects.NewBlobFromFile(match)
-			if err != nil {
-				return err
-			}
-
 			if !options.DryRun {
-				if err := ry.Index.Set(blob.OID(), match); err != nil {
+				if err := ry.Index.Set(match); err != nil {
 					return err
 				}
 			}
