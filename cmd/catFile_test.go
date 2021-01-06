@@ -3,14 +3,19 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"compress/zlib"
 	"github.com/furisto/gog/plumbing/objects"
 	"github.com/furisto/gog/repo"
 	"io"
+	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 )
 
 const BlobContent = "Hello Git!"
+
+var RawBlobContent = []byte("blob 10\x00Hello Git!")
 
 func TestPrintSizeOfBlob(t *testing.T) {
 	r, blob := prepareEnvForBlobTest(t)
@@ -81,6 +86,30 @@ func TestPrettyPrintOfBlob(t *testing.T) {
 
 	if !bytes.Equal([]byte(BlobContent), output.Bytes()) {
 		t.Errorf("content was expected to be '%v', but was '%v'", BlobContent, output.Bytes())
+	}
+}
+
+func TestRawPrintOfBlob(t *testing.T) {
+	r, blob := prepareEnvForBlobTest(t)
+
+	options := CatFileOptions{
+		OID:    blob.OID(),
+		Path:   r.Info.WorkingDirectory(),
+		Type:   false,
+		Size:   false,
+		Pretty: false,
+		Raw:    true,
+	}
+
+	output := bytes.Buffer{}
+	cmd := NewCatFileCmd(&output)
+	if err := cmd.Execute(options); err != nil {
+		t.Errorf("error occured during command execution: %v", err)
+		return
+	}
+
+	if !bytes.Equal(RawBlobContent, output.Bytes()) {
+		t.Errorf("content was expected to be %s, but was %s", RawBlobContent, output.Bytes())
 	}
 }
 
@@ -188,6 +217,54 @@ func TestPrettyPrintOfTree(t *testing.T) {
 	}
 }
 
+func TestRawPrintOfTree(t *testing.T) {
+	ry, tree := prepareEnvForTreeTest(t)
+
+	expected := readGoldenTree(t)
+
+	options := CatFileOptions{
+		OID:    tree.OID(),
+		Path:   ry.Info.WorkingDirectory(),
+		Type:   false,
+		Size:   false,
+		Pretty: false,
+		Raw:    true,
+	}
+
+	output := bytes.Buffer{}
+	cmd := NewCatFileCmd(&output)
+	if err := cmd.Execute(options); err != nil {
+		t.Errorf("error occured during command execution: %v", err)
+		return
+	}
+
+	if !bytes.Equal(expected, output.Bytes()) {
+		t.Errorf("content was expected to be %s, but was %s", expected, output.Bytes())
+	}
+}
+
+func readGoldenTree(t *testing.T) []byte {
+	t.Helper()
+
+	testFilePath := filepath.Join("./testdata/print_raw_tree")
+	fileContent, err := os.Open(testFilePath)
+	if err != nil {
+		t.Fatalf("could not read test file at %s: %v", testFilePath, err)
+	}
+
+	reader, err := zlib.NewReader(fileContent)
+	if err != nil {
+		t.Fatalf("could not create zlib reader for %s: %v", testFilePath, err)
+	}
+
+	var decompressed bytes.Buffer
+	if _, err = io.Copy(&decompressed, reader); err != nil {
+		t.Fatalf("could not copy")
+	}
+
+	return decompressed.Bytes()
+}
+
 func prepareEnvForBlobTest(t *testing.T) (*repo.Repository, *objects.Blob) {
 	t.Helper()
 
@@ -207,9 +284,14 @@ func prepareEnvForTreeTest(t *testing.T) (*repo.Repository, *objects.Tree) {
 	ry := createTestRepository(t)
 	populateRepo(t, ry.Info.WorkingDirectory())
 
-	tree, err := objects.NewTreeFromDirectory(ry.Info.WorkingDirectory(), "")
+	if err := ry.Index.Add(ry.Info.WorkingDirectory()); err != nil {
+		t.Fatalf("could not add working directory to index: %v", err)
+	}
+
+	index_converter := repo.NewIndexToTreeConverter(ry.Index)
+	tree, err := index_converter.Convert()
 	if err != nil {
-		t.Fatalf("could not create tree from directory: %v", err)
+		t.Fatalf("could not convert index to tree: %v", err)
 	}
 
 	if err := tree.Save(ry.Storage); err != nil {
