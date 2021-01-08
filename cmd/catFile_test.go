@@ -6,6 +6,7 @@ import (
 	"compress/zlib"
 	"github.com/furisto/gog/plumbing/objects"
 	"github.com/furisto/gog/repo"
+	"github.com/furisto/gog/util"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 )
 
 const BlobContent = "Hello Git!"
+const CommitOID = "3ab896244757f512b43eb80384463d4dd9334384"
 
 var RawBlobContent = []byte("blob 10\x00Hello Git!")
 
@@ -243,10 +245,117 @@ func TestRawPrintOfTree(t *testing.T) {
 	}
 }
 
+func TestPrintSizeOfCommit(t *testing.T) {
+	ry := prepareEnvForCommitTest(t)
+
+	options := CatFileOptions{
+		OID:    CommitOID,
+		Path:   ry.Info.WorkingDirectory(),
+		Type:   false,
+		Size:   true,
+		Pretty: false,
+	}
+
+	output := bytes.Buffer{}
+	cmd := NewCatFileCmd(&output)
+	if err := cmd.Execute(options); err != nil {
+		t.Errorf("error occured during command execution: %v", err)
+	}
+
+	size, err := strconv.Atoi(output.String())
+	if err != nil {
+		t.Errorf("output could not be parsed as int: %v", err)
+		return
+	}
+
+	if size != 215 {
+		t.Errorf("expected length of %v, but length is %v", 12, size)
+	}
+}
+
+func TestPrintTypeOfCommit(t *testing.T) {
+	ry := prepareEnvForCommitTest(t)
+
+	options := CatFileOptions{
+		OID:    CommitOID,
+		Path:   ry.Info.WorkingDirectory(),
+		Type:   true,
+		Size:   false,
+		Pretty: false,
+	}
+
+	output := bytes.Buffer{}
+	cmd := NewCatFileCmd(&output)
+	if err := cmd.Execute(options); err != nil {
+		t.Errorf("error occured during command execution: %v", err)
+	}
+
+	if !bytes.Equal([]byte("Commit"), output.Bytes()) {
+		t.Errorf("expected type of %v, but was of type %v", "Blob", output.String())
+	}
+}
+
+func TestPrettyPrintCommit(t *testing.T) {
+	ry := prepareEnvForCommitTest(t)
+
+	options := CatFileOptions{
+		OID:    CommitOID,
+		Path:   ry.Info.WorkingDirectory(),
+		Type:   false,
+		Size:   false,
+		Pretty: true,
+	}
+
+	output := bytes.Buffer{}
+	cmd := NewCatFileCmd(&output)
+	if err := cmd.Execute(options); err != nil {
+		t.Errorf("error occured during command execution: %v", err)
+		return
+	}
+
+	expected := "tree 80fa9593f3c3d03f011492504e5d877b97b1277f\n" +
+		"author Furisto <24721048+Furisto@users.noreply.github.com> 1609952762 +0000\n" +
+		"committer Furisto <24721048+Furisto@users.noreply.github.com> 1609952762 +0000\n\n" +
+		"print commit\n"
+
+	if expected != output.String() {
+		t.Errorf("did not receive expected output. Got \n %s \n\n but expected \n %s", output.String(), expected)
+	}
+}
+
+func TestRawPrintOfCommmit(t *testing.T) {
+	ry := prepareEnvForCommitTest(t)
+
+	options := CatFileOptions{
+		OID:    CommitOID,
+		Path:   ry.Info.WorkingDirectory(),
+		Type:   false,
+		Size:   false,
+		Pretty: false,
+		Raw:    true,
+	}
+
+	output := bytes.Buffer{}
+	cmd := NewCatFileCmd(&output)
+	if err := cmd.Execute(options); err != nil {
+		t.Errorf("error occured during command execution: %v", err)
+		return
+	}
+
+	expected := "commit 215\u0000tree 80fa9593f3c3d03f011492504e5d877b97b1277f\n" +
+		"author Furisto <24721048+Furisto@users.noreply.github.com> 1609952762 +0100\n" +
+		"committer Furisto <24721048+Furisto@users.noreply.github.com> 1609952762 +0100\n\n" +
+		"print commit\n"
+
+	if expected != output.String() {
+		t.Errorf("did not receive expected output. Got \n %s \n\n but expected \n %s", output.String(), expected)
+	}
+}
+
 func readGoldenTree(t *testing.T) []byte {
 	t.Helper()
 
-	testFilePath := filepath.Join("./testdata/print_raw_tree")
+	testFilePath := filepath.Join("./testdata/print_tree")
 	fileContent, err := os.Open(testFilePath)
 	if err != nil {
 		t.Fatalf("could not read test file at %s: %v", testFilePath, err)
@@ -299,4 +408,21 @@ func prepareEnvForTreeTest(t *testing.T) (*repo.Repository, *objects.Tree) {
 	}
 
 	return ry, tree
+}
+
+func prepareEnvForCommitTest(t *testing.T) *repo.Repository {
+	t.Helper()
+
+	ry := createTestRepository(t)
+
+	testFilePath := filepath.Join("./testdata/print_commit")
+	testFileData, err := util.ReadAndDecompressFile(testFilePath)
+	if err != nil {
+		t.Fatalf("could not decompress %s: %v", testFilePath, err)
+	}
+
+	if err := ry.Storage.Put(CommitOID, testFileData); err != nil {
+		t.Fatalf("could not store commit in object database: %v", err)
+	}
+	return ry
 }

@@ -417,3 +417,8 @@ func (t *Signature) Encode(writer io.Writer) error {
 	_, err := fmt.Fprintf(writer, " %d %s", t.TimeStamp.Unix(), t.TimeStamp.Format("+0000"))
 	return err
 }
+
+func (s Signature) String() string {
+	return fmt.Sprintf("%s <%s> %d %s",
+		s.Name, s.Email, s.TimeStamp.Unix(), s.TimeStamp.Format("+0000")) // todo: handle timezones
+}

@@ -30,6 +30,14 @@ func FormatObject(o Object) (string, error) {
 			}
 		}
 		return builder.String(), nil
+	case "Commit":
+		commit, ok := o.(*Commit)
+		if !ok {
+			panic("object is of type commit, but cannot be cast to commit")
+		}
+
+		return fmt.Sprintf("tree %s\nauthor %s\ncommitter %s\n\n%s",
+			commit.Tree, commit.Author, commit.Commiter, commit.Message), nil
 	}
 
 	return "", fmt.Errorf("unknown object type")

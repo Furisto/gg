@@ -60,14 +60,18 @@ func NewCatFileCmd(writer io.Writer) CatFileCmd {
 }
 
 func (cmd *CatFileCmd) Execute(options CatFileOptions) error {
-	repo, err := repo.FromExisting(options.Path)
+	ry, err := repo.FromExisting(options.Path)
 	if err != nil {
 		return err
 	}
 
-	oids, err := repo.Storage.Find(options.OID)
+	oids, err := ry.Storage.Find(options.OID)
 	if err != nil {
 		return err
+	}
+
+	if len(oids) == 0 {
+		return fmt.Errorf("not a valid object name %s", options.OID)
 	}
 
 	if len(oids) > 1 {
@@ -78,13 +82,12 @@ func (cmd *CatFileCmd) Execute(options CatFileOptions) error {
 		return fmt.Errorf("cannot decide between: %v", compOids)
 	}
 
-	data, err := repo.Storage.Get(oids[0])
+	data, err := ry.Storage.Get(oids[0])
 	if err != nil {
 		return err
 	}
 
 	var o objects.Object
-	// todo: implement other object types
 	if objects.IsBlob(data) {
 		o, err = objects.LoadBlob(data)
 		if err != nil {
@@ -92,6 +95,11 @@ func (cmd *CatFileCmd) Execute(options CatFileOptions) error {
 		}
 	} else if objects.IsTree(data) {
 		o, err = objects.LoadTree(data)
+		if err != nil {
+			return err
+		}
+	} else if objects.IsCommit(data) {
+		o, err = objects.DecodeCommit(oids[0], data)
 		if err != nil {
 			return err
 		}
