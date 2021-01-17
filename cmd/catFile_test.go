@@ -416,7 +416,7 @@ func prepareEnvForCommitTest(t *testing.T) *repo.Repository {
 	ry := createTestRepository(t)
 
 	testFilePath := filepath.Join("./testdata/print_commit")
-	testFileData, err := util.ReadAndDecompressFile(testFilePath)
+	testFileData, err := util.DecompressFile(testFilePath)
 	if err != nil {
 		t.Fatalf("could not decompress %s: %v", testFilePath, err)
 	}

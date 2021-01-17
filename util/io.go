@@ -14,7 +14,7 @@ func CloseFile(file *os.File, err error) {
 	}
 }
 
-func ReadAndDecompressFile(path string) ([]byte, error) {
+func DecompressFile(path string) ([]byte, error) {
 	stat, err := os.Stat(path)
 	if err != nil {
 		return nil, err
