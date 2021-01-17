@@ -363,7 +363,9 @@ func (cb *CommitBuilder) Build() (*Commit, error) {
 		Message:  cb.message,
 	}
 
-	cb.hook(&c)
+	if cb.hook != nil {
+		cb.hook(&c)
+	}
 
 	var content bytes.Buffer
 	if err := c.writeContent(&content); err != nil {
