@@ -19,10 +19,10 @@ func SetupCatFileCmd(context CommandContext) *cobra.Command {
 	cmd.Args = cobra.ExactArgs(1)
 
 	options := CatFileOptions{}
-	cmd.Flags().BoolVarP(&options.Pretty, "", "p", false, "pretty-print object's content")
-	cmd.Flags().BoolVarP(&options.Size, "", "s", false, "")
-	cmd.Flags().BoolVarP(&options.Type, "", "t", false, "")
-	cmd.Flags().BoolVarP(&options.Raw, "", "r", false,
+	cmd.Flags().BoolVarP(&options.Pretty, "pretty-print", "p", false, "pretty-print object's content")
+	cmd.Flags().BoolVarP(&options.Size, "size", "s", false, "")
+	cmd.Flags().BoolVarP(&options.Type, "type", "t", false, "")
+	cmd.Flags().BoolVarP(&options.Raw, "raw", "r", false,
 		"prints the decompressed on-disk representation of the object")
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		options.OID = args[0]
@@ -87,6 +87,11 @@ func (cmd *CatFileCmd) Execute(options CatFileOptions) error {
 		return err
 	}
 
+	if options.Raw {
+		fmt.Fprintf(cmd.writer, "%s", data)
+		return nil
+	}
+
 	var o objects.Object
 	if objects.IsBlob(data) {
 		o, err = objects.LoadBlob(data)
@@ -118,8 +123,6 @@ func (cmd *CatFileCmd) Execute(options CatFileOptions) error {
 		}
 
 		fmt.Fprint(cmd.writer, output)
-	} else if options.Raw {
-		fmt.Fprintf(cmd.writer, "%s", data)
 	}
 
 	return nil
