@@ -6,5 +6,6 @@ require (
 	github.com/magiconair/properties v1.8.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/spf13/cobra v1.0.0
+	github.com/stretchr/testify v1.2.2
 	gopkg.in/ini.v1 v1.62.0
 )
