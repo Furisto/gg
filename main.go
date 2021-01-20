@@ -46,5 +46,8 @@ func setupCommands() *cobra.Command {
 	branch := cmd.SetupBranchCmd(cmdContext)
 	rootCmd.AddCommand(branch)
 
+	tag := cmd.SetupTagCmd(cmdContext)
+	rootCmd.AddCommand(tag)
+
 	return rootCmd
 }

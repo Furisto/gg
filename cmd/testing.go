@@ -3,6 +3,7 @@ package cmd
 import (
 	"crypto/rand"
 	"fmt"
+	"github.com/furisto/gog/plumbing/objects"
 	"github.com/furisto/gog/plumbing/refs"
 	"github.com/furisto/gog/repo"
 	"github.com/furisto/gog/storage"
@@ -64,6 +65,47 @@ func prepareEnvWithCommits(t *testing.T) *repo.Repository {
 	}
 
 	return ry
+}
+
+func prepareEnvWithCommitObjects(t *testing.T) (*repo.Repository, []*objects.Commit) {
+	t.Helper()
+
+	ry := PrepareEnvWithNoCommmits(t)
+	commit, err := ry.Commit(func(builder *objects.CommitBuilder) *objects.CommitBuilder {
+		builder.WithMessage("commit1")
+		return builder
+	})
+
+	if err != nil {
+		t.Fatalf("could not create commit object: %v", err)
+	}
+
+	return ry, []*objects.Commit{commit}
+}
+
+func prepareEnvWithTags(t *testing.T) (*repo.Repository, []*objects.Commit, []*refs.Ref) {
+	t.Helper()
+
+	ry, commits := prepareEnvWithCommitObjects(t)
+	tags := make([]*refs.Ref, 4)
+
+	for i := 0; i < 4; i++ {
+		tagName := "lightweight" + strconv.Itoa(i)
+		var tagValue string
+		if i%2 == 0 {
+			tagValue = commits[0].OID()
+		} else {
+			tagValue = "abcd"
+		}
+		r, err := ry.Tags.CreateLightweight(tagName, tagValue, false)
+		if err != nil {
+			t.Fatalf("could not create %s", tagName)
+		}
+
+		tags[i] = r
+	}
+
+	return ry, commits, tags
 }
 
 func PrepareEnvWithNoCommmits(t *testing.T) *repo.Repository {

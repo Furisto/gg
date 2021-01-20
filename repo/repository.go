@@ -37,6 +37,7 @@ type Repository struct {
 	Info       *RepositoryInfo
 	Refs       refs.RefManager
 	Branches   Branches
+	Tags       Tags
 }
 
 func Init(path string, bare bool, storage storage.ObjectStore, refs refs.RefManager) (*Repository, error) {
@@ -94,6 +95,7 @@ func NewRepo(workingDir string, gitDir string, store storage.ObjectStore, cfg co
 		Config:     cfg,
 		Refs:       refs,
 		Branches:   NewBranches(refs),
+		Tags:       NewTags(refs, store),
 	}
 
 	r.Info = NewRepositoryInfo(r)
@@ -216,7 +218,7 @@ func (ry *Repository) SetHead(ref string) error {
 }
 
 func (ry *Repository) Commit(configure func(builder *objects.CommitBuilder) *objects.CommitBuilder) (*objects.Commit, error) {
-	tree, err := objects.NewTreeFromDirectory(ry.gitDir, "")
+	tree, err := objects.NewTreeFromDirectory(ry.Info.WorkingDirectory(), "")
 	if err != nil {
 		return nil, err
 	}
