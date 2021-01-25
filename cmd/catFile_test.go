@@ -7,6 +7,7 @@ import (
 	"github.com/furisto/gog/plumbing/objects"
 	"github.com/furisto/gog/repo"
 	"github.com/furisto/gog/util"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"os"
 	"path/filepath"
@@ -64,7 +65,7 @@ func TestPrintTypeOfBlob(t *testing.T) {
 		t.Errorf("error occured during command execution: %v", err)
 	}
 
-	if !bytes.Equal([]byte("Blob"), output.Bytes()) {
+	if !bytes.Equal([]byte("blob"), output.Bytes()) {
 		t.Errorf("expected type of %v, but was of type %v", "Blob", output.String())
 	}
 }
@@ -157,7 +158,7 @@ func TestPrintTypeOfTree(t *testing.T) {
 		return
 	}
 
-	if output.String() != "Tree" {
+	if output.String() != "tree" {
 		t.Errorf("expected type '%v' but got type '%v'", "Tree", output.String())
 	}
 }
@@ -290,8 +291,8 @@ func TestPrintTypeOfCommit(t *testing.T) {
 		t.Errorf("error occured during command execution: %v", err)
 	}
 
-	if !bytes.Equal([]byte("Commit"), output.Bytes()) {
-		t.Errorf("expected type of %v, but was of type %v", "Blob", output.String())
+	if !bytes.Equal([]byte("commit"), output.Bytes()) {
+		t.Errorf("expected type of %v, but was of type %v", "commit", output.String())
 	}
 }
 
@@ -350,6 +351,105 @@ func TestRawPrintOfCommmit(t *testing.T) {
 	if expected != output.String() {
 		t.Errorf("did not receive expected output. Got \n %s \n\n but expected \n %s", output.String(), expected)
 	}
+}
+
+func TestPrintSizeOfTag(t *testing.T) {
+	ry, tag := prepareEnvWithAnnotatedTag(t)
+
+	options := CatFileOptions{
+		OID:    tag.OID(),
+		Path:   ry.Info.WorkingDirectory(),
+		Type:   false,
+		Size:   true,
+		Pretty: false,
+		Raw:    false,
+	}
+
+	output := bytes.Buffer{}
+	cmd := NewCatFileCmd(&output)
+	if err := cmd.Execute(options); err != nil {
+		t.Errorf("error occured during command execution: %v", err)
+		return
+	}
+
+	assert.Equal(t, "140", output.String())
+}
+
+func TestPrintTypeOfTag(t *testing.T) {
+	ry, tag := prepareEnvWithAnnotatedTag(t)
+
+	options := CatFileOptions{
+		OID:    tag.OID(),
+		Path:   ry.Info.WorkingDirectory(),
+		Type:   true,
+		Size:   false,
+		Pretty: false,
+		Raw:    false,
+	}
+
+	output := bytes.Buffer{}
+	cmd := NewCatFileCmd(&output)
+	if err := cmd.Execute(options); err != nil {
+		t.Errorf("error occured during command execution: %v", err)
+		return
+	}
+
+	assert.Equal(t, "tag", output.String())
+}
+
+func TestPrettyPrintTag(t *testing.T) {
+	ry, tag := prepareEnvWithAnnotatedTag(t)
+
+	options := CatFileOptions{
+		OID:    tag.OID(),
+		Path:   ry.Info.WorkingDirectory(),
+		Type:   false,
+		Size:   false,
+		Pretty: true,
+		Raw:    false,
+	}
+
+	output := bytes.Buffer{}
+	cmd := NewCatFileCmd(&output)
+	if err := cmd.Execute(options); err != nil {
+		t.Errorf("error occured during command execution: %v", err)
+		return
+	}
+
+	expected := "object f58d08adb14c10e1d25124bb8bfe5f6fa3c6e3cd\n" +
+		"type commit\n" +
+		"tag annotated\n" +
+		"tagger furisto <furisto@test.com> 1611348418 +0000\n\n" +
+		"annotated tag"
+
+	assert.Equal(t, expected, output.String())
+}
+
+func TestRawPrintOfTag(t *testing.T) {
+	ry, tag := prepareEnvWithAnnotatedTag(t)
+
+	options := CatFileOptions{
+		OID:    tag.OID(),
+		Path:   ry.Info.WorkingDirectory(),
+		Type:   false,
+		Size:   false,
+		Pretty: false,
+		Raw:    true,
+	}
+
+	output := bytes.Buffer{}
+	cmd := NewCatFileCmd(&output)
+	if err := cmd.Execute(options); err != nil {
+		t.Errorf("error occured during command execution: %v", err)
+		return
+	}
+
+	expected := "tag 140\x00object f58d08adb14c10e1d25124bb8bfe5f6fa3c6e3cd\n" +
+		"type commit\n" +
+		"tag annotated\n" +
+		"tagger furisto <furisto@test.com> 1611348418 +0000\n\n" +
+		"annotated tag\n"
+	assert.Equal(t, expected, output.String())
 }
 
 func readGoldenTree(t *testing.T) []byte {

@@ -38,6 +38,17 @@ func FormatObject(o Object) (string, error) {
 
 		return fmt.Sprintf("tree %s\nauthor %s\ncommitter %s\n\n%s",
 			commit.Tree, commit.Author, commit.Commiter, commit.Message), nil
+	case "Tag":
+		tag, ok := o.(*Tag)
+		if !ok {
+			panic("object is of type tag, but cannot be cast to tag")
+		}
+
+		return fmt.Sprintf("object %s\n"+
+			"type %s\n"+
+			"tag %s\n"+
+			"tagger %s\n\n"+
+			"%s", tag.TargetOID(), strings.ToLower(tag.TargetType()), tag.Name(), tag.Tagger().String(), tag.Message()), nil
 	}
 
 	return "", fmt.Errorf("unknown object type")

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 )
 
 const ParentCommit = "48743154a35f5751796d39ebceb615453abac8de"
@@ -72,7 +73,11 @@ func prepareEnvWithCommitObjects(t *testing.T) (*repo.Repository, []*objects.Com
 
 	ry := PrepareEnvWithNoCommmits(t)
 	commit, err := ry.Commit(func(builder *objects.CommitBuilder) *objects.CommitBuilder {
-		builder.WithMessage("commit1")
+		builder.WithMessage("commit1").
+			WithHook(func(commit *objects.Commit) {
+				commit.Commiter.TimeStamp = time.Unix(1611606380, 0)
+				commit.Author.TimeStamp = time.Unix(1611606380, 0)
+			})
 		return builder
 	})
 
@@ -106,6 +111,24 @@ func prepareEnvWithTags(t *testing.T) (*repo.Repository, []*objects.Commit, []*r
 	}
 
 	return ry, commits, tags
+}
+
+func prepareEnvWithAnnotatedTag(t *testing.T) (*repo.Repository, *objects.Tag) {
+	t.Helper()
+
+	ry, commits := prepareEnvWithCommitObjects(t)
+
+	tagger := objects.Signature{
+		Name:      "furisto",
+		Email:     "furisto@test.com",
+		TimeStamp: time.Unix(1611348418, 0),
+	}
+	tag, err := ry.Tags.CreateAnnotated("annotated", commits[0].OID(), &tagger, "annotated tag", false)
+	if err != nil {
+		t.Fatalf("could not create annotated tag: %v", err)
+	}
+
+	return ry, tag
 }
 
 func PrepareEnvWithNoCommmits(t *testing.T) *repo.Repository {

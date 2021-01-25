@@ -25,7 +25,7 @@ import (
 // An example would be
 // tag
 
-var tagType = []byte("Tag")
+var tagType = []byte("tag")
 
 type Tag struct {
 	ref        refs.Ref
@@ -130,7 +130,7 @@ func (t *Tag) writeBody(writer io.Writer) error {
 		return err
 	}
 
-	if _, err := fmt.Fprintf(writer, "type %s\n", t.targetType); err != nil {
+	if _, err := fmt.Fprintf(writer, "type %s\n", strings.ToLower(t.targetType)); err != nil {
 		return err
 	}
 
@@ -149,7 +149,7 @@ func (t *Tag) writeBody(writer io.Writer) error {
 	return nil
 }
 
-func DecodeTag(reader io.Reader) (*Tag, error) {
+func DecodeTag(oid string, reader io.Reader) (*Tag, error) {
 	buf := bufio.NewReader(reader)
 
 	objectType, err := buf.ReadString(byte(' '))
@@ -209,7 +209,7 @@ func DecodeTag(reader io.Reader) (*Tag, error) {
 	message = strings.TrimSuffix(message, "\n")
 
 	return &Tag{
-		oid:        "",
+		oid:        oid,
 		size:       uint32(size),
 		targetOID:  targetOID,
 		targetType: targetType,

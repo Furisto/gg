@@ -15,9 +15,9 @@ func TestDecodeTag(t *testing.T) {
 		t.Fatalf("could not read golden file at %s", tagFilePath)
 	}
 
-	tag, err := DecodeTag(bytes.NewReader(data))
+	tag, err := DecodeTag("", bytes.NewReader(data))
 	if err != nil {
-		t.Errorf("")
+		t.Errorf("could not decode tag: %v", err)
 		return
 	}
 

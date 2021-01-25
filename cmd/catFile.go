@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/furisto/gog/plumbing/objects"
@@ -8,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"io"
 	"os"
+	"strings"
 )
 
 func SetupCatFileCmd(context CommandContext) *cobra.Command {
@@ -82,7 +84,8 @@ func (cmd *CatFileCmd) Execute(options CatFileOptions) error {
 		return fmt.Errorf("cannot decide between: %v", compOids)
 	}
 
-	data, err := ry.Storage.Get(oids[0])
+	resolvedOid := oids[0]
+	data, err := ry.Storage.Get(resolvedOid)
 	if err != nil {
 		return err
 	}
@@ -104,7 +107,12 @@ func (cmd *CatFileCmd) Execute(options CatFileOptions) error {
 			return err
 		}
 	} else if objects.IsCommit(data) {
-		o, err = objects.DecodeCommit(oids[0], data)
+		o, err = objects.DecodeCommit(resolvedOid, data)
+		if err != nil {
+			return err
+		}
+	} else if objects.IsTag(data) {
+		o, err = objects.DecodeTag(resolvedOid, bytes.NewReader(data))
 		if err != nil {
 			return err
 		}
@@ -115,7 +123,7 @@ func (cmd *CatFileCmd) Execute(options CatFileOptions) error {
 	if options.Size {
 		fmt.Fprintf(cmd.writer, "%v", o.Size())
 	} else if options.Type {
-		fmt.Fprintf(cmd.writer, "%v", o.Type())
+		fmt.Fprintf(cmd.writer, "%s", strings.ToLower(o.Type()))
 	} else if options.Pretty {
 		output, err := objects.FormatObject(o)
 		if err != nil {
