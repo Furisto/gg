@@ -60,12 +60,7 @@ func (cmd *LogCommand) Execute(options LogCmdOptions) error {
 		return err
 	}
 
-	headRef, err := r.Head()
-	if err != nil {
-		return err
-	}
-
-	resolvedRef, err := r.Refs.Resolve(headRef)
+	resolvedRef, err := r.Head(true)
 	if err != nil {
 		return err
 	}
