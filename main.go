@@ -49,5 +49,8 @@ func setupCommands() *cobra.Command {
 	tag := cmd.SetupTagCmd(cmdContext)
 	rootCmd.AddCommand(tag)
 
+	checkout := cmd.SetupCheckoutCmd(cmdContext)
+	rootCmd.AddCommand(checkout)
+
 	return rootCmd
 }

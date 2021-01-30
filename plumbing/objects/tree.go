@@ -64,7 +64,7 @@ func NewTreeFromDirectory(path string, prefix string) (*Tree, error) {
 				return nil, err
 			}
 
-			tree.entries = append(tree.entries, TreeEntry{Mode: f.Mode(), Name: f.Name(), OID: subTree.OID(), Object: subTree})
+			tree.entries = append(tree.entries, TreeEntry{Mode: 0o40000, Name: f.Name(), OID: subTree.OID(), Object: subTree})
 		} else {
 			if !strings.HasPrefix(f.Name(), prefix) {
 				continue
@@ -183,9 +183,11 @@ func (t *Tree) Bytes() []byte {
 }
 
 func (t *Tree) Save(store storage.ObjectStore) error {
-	entries := append(t.Trees, t.Blobs...)
+	for _, entry := range t.Entries() {
+		if entry.Object == nil {
+			continue // fixme: ugly hack for trees converted from index
+		}
 
-	for _, entry := range entries {
 		if err := entry.Object.Save(store); err != nil {
 			return err
 		}
