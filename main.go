@@ -52,5 +52,8 @@ func setupCommands() *cobra.Command {
 	checkout := cmd.SetupCheckoutCmd(cmdContext)
 	rootCmd.AddCommand(checkout)
 
+	unpackFiles := cmd.SetupUnpackFileCmd(cmdContext)
+	rootCmd.AddCommand(unpackFiles)
+
 	return rootCmd
 }
