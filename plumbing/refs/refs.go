@@ -118,7 +118,13 @@ func (grm *GitRefManager) Set(name, target string) (*Ref, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = ioutil.WriteFile(filepath.Join(grm.gitDir, ref.Name), []byte(ref.RefValue), 0644)
+
+	refPath := filepath.Join(grm.gitDir, ref.Name)
+	if err := os.MkdirAll(filepath.Dir(refPath), os.ModeDir); err != nil {
+		return nil, err
+	}
+
+	err = ioutil.WriteFile(refPath, []byte(ref.RefValue), 0644)
 	if err != nil {
 		return nil, err
 	}

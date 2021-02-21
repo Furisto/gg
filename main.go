@@ -55,5 +55,8 @@ func setupCommands() *cobra.Command {
 	unpackFiles := cmd.SetupUnpackFileCmd(cmdContext)
 	rootCmd.AddCommand(unpackFiles)
 
+	notes := cmd.SetupNotesCmd(cmdContext)
+	rootCmd.AddCommand(notes)
+
 	return rootCmd
 }

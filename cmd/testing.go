@@ -71,21 +71,39 @@ func prepareEnvWithCommits(t *testing.T) *repo.Repository {
 func prepareEnvWithCommitObjects(t *testing.T) (*repo.Repository, []*objects.Commit) {
 	t.Helper()
 
-	ry := PrepareEnvWithNoCommmits(t)
-	commit, err := ry.Commit(func(builder *objects.CommitBuilder) *objects.CommitBuilder {
-		builder.WithMessage("commit1").
-			WithHook(func(commit *objects.Commit) {
-				commit.Commiter.TimeStamp = time.Unix(1611606380, 0)
-				commit.Author.TimeStamp = time.Unix(1611606380, 0)
-			})
-		return builder
-	})
+	ry := createTestRepository(t)
+	commits := make([]*objects.Commit, 0, 5)
 
-	if err != nil {
-		t.Fatalf("could not create commit object: %v", err)
+	for i := 0; i < 5; i++ {
+		dirName := filepath.Join(ry.Info.WorkingDirectory(), strconv.Itoa(i))
+		if err := os.Mkdir(dirName, os.ModeDir); err != nil {
+			t.Fatalf("could not create test directory: %v", err)
+		}
+
+		for j := 0; j < 2; j++ {
+			v := strconv.Itoa(j)
+			if err := ioutil.WriteFile(filepath.Join(dirName, v), []byte(strconv.Itoa(i)+v), 0644); err != nil {
+				t.Fatalf("could not create test blob: %v", err)
+			}
+		}
+
+		commit, err := ry.Commit(func(builder *objects.CommitBuilder) *objects.CommitBuilder {
+			builder.WithMessage("commit1").
+				WithHook(func(commit *objects.Commit) {
+					commit.Commiter.TimeStamp = time.Unix(1611606380+int64(i)*10000, 0)
+					commit.Author.TimeStamp = time.Unix(1611606380+int64(i)*10000, 0)
+				})
+			return builder
+		})
+
+		if err != nil {
+			t.Fatalf("could not create commit object: %v", err)
+		}
+
+		commits = append(commits, commit)
 	}
 
-	return ry, []*objects.Commit{commit}
+	return ry, commits
 }
 
 func prepareEnvWithTags(t *testing.T) (*repo.Repository, []*objects.Commit, []*refs.Ref) {
@@ -159,6 +177,10 @@ func createTestRepository(t *testing.T) *repo.Repository {
 	if err != nil {
 		t.Fatalf("could not initialize test repository: %v", err)
 	}
+
+	t.Cleanup(func() {
+		os.RemoveAll(dir)
+	})
 
 	return r
 }

@@ -38,6 +38,7 @@ type Repository struct {
 	Refs       refs.RefManager
 	Branches   Branches
 	Tags       Tags
+	Notes      Notes
 }
 
 func Init(path string, bare bool, storage storage.ObjectStore, refs refs.RefManager) (*Repository, error) {
@@ -85,17 +86,16 @@ func InitDefault(path string, bare bool) (*Repository, error) {
 }
 
 func NewRepo(workingDir string, gitDir string, store storage.ObjectStore, cfg config.Config, refs refs.RefManager) *Repository {
-	index := NewIndex(workingDir, gitDir, store)
-
 	r := &Repository{
 		gitDir:     gitDir,
 		workingDir: workingDir,
 		Storage:    store,
-		Index:      index,
+		Index:      NewIndex(workingDir, gitDir, store),
 		Config:     cfg,
 		Refs:       refs,
 		Branches:   NewBranches(refs),
 		Tags:       NewTags(refs, store),
+		Notes:      NewNotes(refs, store, cfg, "commits"),
 	}
 
 	r.Info = NewRepositoryInfo(r)

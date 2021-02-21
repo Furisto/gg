@@ -196,6 +196,26 @@ func (t *Tree) Save(store storage.ObjectStore) error {
 	return store.Put(t.OID(), t.Bytes())
 }
 
+func (t *Tree) GetEntryByOID(oid string) (TreeEntry, bool) {
+	for _, entry := range t.Entries() {
+		if entry.OID == oid {
+			return entry, true
+		}
+	}
+
+	return TreeEntry{}, false
+}
+
+func (t *Tree) GetEntryByName(name string) (TreeEntry, bool) {
+	for _, entry := range t.Entries() {
+		if entry.Name == name {
+			return entry, true
+		}
+	}
+
+	return TreeEntry{}, false
+}
+
 func (t *Tree) getHeader() []byte {
 	return []byte(fmt.Sprintf("tree %v\x00", t.Size()))
 }
@@ -254,24 +274,30 @@ func (*treeEntrySorter) adaptName(entry TreeEntry) string {
 }
 
 type TreeBuilder struct {
-	entries      []TreeEntry
+	entries      map[string]TreeEntry
 	treeBuilders map[string]*TreeBuilder
 }
 
 func NewTreeBuilder() *TreeBuilder {
 	return &TreeBuilder{
+		entries:      make(map[string]TreeEntry),
 		treeBuilders: make(map[string]*TreeBuilder),
 	}
 }
 
 func (tb *TreeBuilder) AddBlob(oid, name string, mode os.FileMode) {
+	blobEntry, ok := tb.entries[name+".blob"]
+	if ok && blobEntry.OID == oid {
+		return
+	}
+
 	treeEntry := TreeEntry{
 		OID:  oid,
 		Name: name,
 		Mode: mode,
 	}
 
-	tb.entries = append(tb.entries, treeEntry)
+	tb.entries[name+".blob"] = treeEntry
 }
 
 func (tb *TreeBuilder) AddSubTree(name string, treeBuilder *TreeBuilder) {
@@ -281,14 +307,19 @@ func (tb *TreeBuilder) AddSubTree(name string, treeBuilder *TreeBuilder) {
 func (tb *TreeBuilder) Build() *Tree {
 	for name, treeBuilder := range tb.treeBuilders {
 		tree := treeBuilder.Build()
-		tb.entries = append(tb.entries, TreeEntry{
+		tb.entries[name+".dir"] = TreeEntry{
 			OID:    tree.oid,
 			Name:   name,
 			Mode:   0o040000,
 			Object: tree,
-		})
+		}
 	}
 
-	sort.Sort(treeEntrySorter(tb.entries))
-	return NewTree(tb.entries)
+	entries := make([]TreeEntry, 0, len(tb.entries))
+	for _, e := range tb.entries {
+		entries = append(entries, e)
+	}
+
+	sort.Sort(treeEntrySorter(entries))
+	return NewTree(entries)
 }
