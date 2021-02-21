@@ -12,7 +12,10 @@ import (
 )
 
 func SetupUnpackFileCmd(context CommandContext) *cobra.Command {
-	cmd := new(cobra.Command)
+	cmd := &cobra.Command{
+		Use:   "unpack-file",
+		Short: "Creates a temporary file with a blob's contents",
+	}
 	cmd.Args = cobra.ExactArgs(1)
 
 	options := UnpackFileCmdOptions{}
